@@ -8,7 +8,8 @@ export default async(globalConfig: any) => {
         {
             command: 'npm run dev --prefix ../svelte-app',
             protocol: 'http',
-            port: 5000
+            port: 5000,
+            launchTimeout: 10000 // 10 seconds
         }
     ]);
     return setupPuppeteer(globalConfig);
