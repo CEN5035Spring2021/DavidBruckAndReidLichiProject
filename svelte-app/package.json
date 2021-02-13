@@ -24,6 +24,9 @@
     "@tsconfig/svelte": "^1.0.0"
   },
   "dependencies": {
+    "core-js-bundle": "^3.8.3",
+    "indexeddbshim": "^7.0.0",
+    "opencrypto": "^1.5.5",
     "sirv-cli": "^1.0.0"
   }
 }
