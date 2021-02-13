@@ -6,7 +6,7 @@ const { setup: setupPuppeteer }: { setup: (_: any) => Promise<void> } =
 export default async(globalConfig: any) => {
     await setupDevServer([
         {
-            command: 'npm run dev --prefix ../svelte-app',
+            command: 'npm run start --prefix ../svelte-app',
             protocol: 'http',
             port: 5000,
             launchTimeout: 10000 // 10 seconds

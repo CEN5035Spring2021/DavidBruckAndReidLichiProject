@@ -12,12 +12,14 @@
                 "<node_internals>/**"
             ],
             "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
+            "env": {
+                "HEADLESS": "false"
+            },
             "args": [
                 "${fileBasename}",
                 "--verbose",
                 "-i",
                 "--no-cache",
-                "--runInBand",
                 "false"
             ],
             "console": "integratedTerminal",
