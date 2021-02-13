@@ -1,12 +1,16 @@
 <script lang=ts>
-import { writable } from 'svelte/store';
+    import { onMount } from 'svelte';
+    import { emailAddress, privateKey } from '../stores/user';
+    import CreateUser from './CreateUser.svelte';
 
-    import { emailAddress } from '../stores/user'
+    let emailInput: HTMLInputElement;
+    let feedback: string;
+    let emailAddressInvalid: boolean;
+    let password: string;
+    let passwordInvalid: boolean;
+    let creatingUser: boolean;
 
-    let feedback;
-    let emailAddressInvalid;
-    let password;
-    let passwordInvalid;
+    onMount(() => emailInput.focus());
 
     const login = () => {
         const error = (err: any) => {
@@ -31,30 +35,41 @@ import { writable } from 'svelte/store';
     };
 
     const onKeyPress = (e: KeyboardEvent) => e.key === 'Enter' && login();
+    const createUser = () => creatingUser = true;
+    const closeUserCreation = () => creatingUser = false;
 </script>
 
 <fieldset>
     <legend>&nbsp;Existing user&nbsp;</legend>
     <label for=email>Email:</label>
-    <input type=email name=email bind:value={ $emailAddress } on:keypress={ onKeyPress }
-           class:invalid={ emailAddressInvalid } />
+    <input type=email id=email bind:value={ $emailAddress } on:keypress={ onKeyPress }
+           class:invalid={ emailAddressInvalid } disabled={ creatingUser }
+           bind:this={ emailInput } />
     <br />
     <label for=password>Password:</label>
-    <input type=password name=password bind:value={ password } on:keypress={ onKeyPress }
-           class:invalid={ passwordInvalid } />
+    <input type=password id=password bind:value={ password } on:keypress={ onKeyPress }
+           class:invalid={ passwordInvalid } disabled={ creatingUser } />
     <br />
     <br />
-    <input type=button value=Login on:click={ login } />
+    <input type=button value=Login on:click={ login } disabled={ creatingUser } />
     { #if (feedback) }
         <br />
-        <span></span>
+        <span />
         { feedback }
     { /if }
 </fieldset>
 
+<br />
+<button on:click={ createUser }>Create new user</button>
+<br />
+
+{ #if (creatingUser) }
+    <CreateUser close={ closeUserCreation } />
+{ /if }
+
 <style>    
-	legend {
-		font-size: 1.3em;
+    legend {
+        font-size: 1.3em;
         font-weight: 700;
     }
 
@@ -64,18 +79,39 @@ import { writable } from 'svelte/store';
 
     input {
         width: 100%;
+        background-color: #fff;
+        color: #333;
+    }
+
+    input[ type=button ] {
+        cursor: pointer;
+        background-color: #efefef;
+        color: #000;
     }
 
     span::before {
         content: "⚠";
         font-size: 1.5em;
         font-weight: 700;
-        color: darkorange;
+        color: #ff8c00;
         vertical-align: sub;
     }
 
     .invalid {
-        outline: red auto 1px;
+        outline: #f00 auto 1px;
+    }
+
+    button {
+        color: #0064c8;
+        cursor: pointer;
+        background: none;
+        padding: 0;
+        margin: 0;
+        border: none;
+    }
+
+    button:hover {
+        text-decoration: underline;
     }
 
     @media (min-width: 640px) {
