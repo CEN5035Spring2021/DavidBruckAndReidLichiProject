@@ -1,10 +1,13 @@
 <script lang=ts>
     import { onMount } from 'svelte';
-    import { emailAddress, publicKey, privateKey } from '../stores/user';
+    import { emailAddress, publicKey, privateKey, runUnderUserStore } from '../stores/user';
+    import type { UserStore, IUser } from '../stores/user';
     import Modal from './Modal.svelte';
     import OpenCrypto from 'opencrypto';
+    import type { Writable } from 'svelte/store';
 
     export let close: () => void;
+    export let creatingUser: Writable<boolean>;
 
     let emailInput: HTMLInputElement;
     let feedback: string;
@@ -14,7 +17,6 @@
     let passwordInvalid: boolean;
     let confirmPassword: string;
     let confirmPasswordInvalid: boolean;
-    let creatingUser: boolean;
 
     onMount(() => emailInput.focus());
 
@@ -53,72 +55,79 @@
             return;
         }
 
-        creatingUser = true;
+        $creatingUser = true;
+        try {
+            // While it seems like it would be more efficient to skip creating the public/private key pair
+            // if we end up finding a duplicate user with the same email address, that would cause error:
+            // !! Failed to execute 'put' on 'IDBObjectStore': The transaction has finished
+            //
+            // This is because on the onsuccess callback from querying the existing user, we must synchronously
+            // start the next put request. Adding asynchronous OpenCrypto calls in between de-synchronizes it.
 
-        const crypt = new OpenCrypto();
-        const keyPair = await crypt.getRSAKeyPair(
-            4096,
-            'SHA-512',
-            'RSA-OAEP',
-            [
-                'encrypt',
-                'decrypt'
-            ],
-            true);
+            const crypt = new OpenCrypto();
+            const keyPair = await crypt.getRSAKeyPair(
+                4096,
+                'SHA-512',
+                'RSA-OAEP',
+                [
+                    'encrypt',
+                    'decrypt'
+                ],
+                true);
 
-        const encryptedPrivateKey = await crypt.encryptPrivateKey(
-            keyPair.privateKey,
-            password,
-            100_000,
-            'SHA-512',
-            'AES-GCM',
-            256);
+            const encryptedPrivateKey = await crypt.encryptPrivateKey(
+                keyPair.privateKey,
+                password,
+                100_000,
+                'SHA-512',
+                'AES-GCM',
+                256);
 
-        const db = indexedDB.open('SecureGroupMessenger');
-
-        const storeName = 'UserStore';
-        db.onupgradeneeded = () => db.result.createObjectStore(
-            storeName,
-            {
-                keyPath: 'emailAddress'
+            await runUnderUserStore(createUserImplementation, {
+                encryptedPrivateKey,
+                keyPair
             });
-
-        db.onsuccess = () => {
-            const connection = db.result;
-            const transaction = connection.transaction(storeName, 'readwrite');
-            transaction.oncomplete = () => {
-                connection.close();
-            };
-
-            const objectStore = transaction.objectStore(storeName);
-
-            const lowercasedEmailAddress = localEmailAddress.toLowerCase();
-            const countRequest = objectStore.count(lowercasedEmailAddress);
-            countRequest.onsuccess = () => {
-                if (countRequest.result) {
-                    error('User already exists with this Email');
-                    emailAddressInvalid = true;
-                    creatingUser = false;
-                    return;
-                }
-
-                const putRequest = objectStore.put({
-                    emailAddress: lowercasedEmailAddress,
-                    encryptedPrivateKey,
-                    publicKey: keyPair.publicKey
-                });
-
-                putRequest.onsuccess = () => {
-                    emailAddress.set(localEmailAddress);
-                    publicKey.set(keyPair.publicKey);
-                    privateKey.set(keyPair.privateKey);
-                    creatingUser = false;
-                };
-            };
-        };
+        } catch (e) {
+            error(`Error: ${e && e.message || e}`);
+            throw(e);
+        } finally {
+            $creatingUser = false;
+        }
     };
 
     const onKeyPress = async (e: KeyboardEvent) => e.key === 'Enter' && await createUser();
+
+    async function createUserImplementation(
+        userStore: UserStore,
+        state: {
+            keyPair: any,
+            encryptedPrivateKey: any
+        }) {
+
+        const lowercasedEmailAddress = localEmailAddress.toLowerCase();
+        const existingUser = await userStore.getUser(
+            lowercasedEmailAddress,
+            async (existingUser: IUser) => {
+                if (existingUser) {
+                    return;
+                }
+
+                await userStore.putUser({
+                    lowercasedEmailAddress,
+                    encryptedPrivateKey: state.encryptedPrivateKey,
+                    publicKey: state.keyPair.publicKey
+                });
+
+                emailAddress.set(localEmailAddress);
+                publicKey.set(state.keyPair.publicKey);
+                privateKey.set(state.keyPair.privateKey);
+            });
+        if (existingUser) {
+            feedback = 'User already exists with this Email';
+            emailAddressInvalid = true;
+            return;
+        }
+    }
 </script>
 
 <Modal { close }>
@@ -126,19 +135,19 @@
     <div slot=content>
         <label for=newEmail>Email:</label>
         <input type=email id=newEmail bind:value={ localEmailAddress } on:keypress={ onKeyPress }
-               class:invalid={ emailAddressInvalid } disabled={ creatingUser }
+               class:invalid={ emailAddressInvalid } disabled={ $creatingUser }
                bind:this={ emailInput } />
         <br />
         <label for=newPassword>Password:</label>
         <input type=password id=newPassword bind:value={ password } on:keypress={ onKeyPress }
-               class:invalid={ passwordInvalid } disabled={ creatingUser } />
+               class:invalid={ passwordInvalid } disabled={ $creatingUser } />
         <br />
         <label for=confirmPassword>Confirm password:</label>
         <input type=password id=confirmPassword bind:value={ confirmPassword } on:keypress={ onKeyPress }
-                class:invalid={ confirmPasswordInvalid } disabled={ creatingUser } />
+                class:invalid={ confirmPasswordInvalid } disabled={ $creatingUser } />
         <br />
         <br />
-        <input type=button value="Create user" on:click={ createUser } disabled={ creatingUser } />
+        <input type=button value="Create user" on:click={ createUser } disabled={ $creatingUser } />
         { #if (feedback) }
             <br />
             <span />
