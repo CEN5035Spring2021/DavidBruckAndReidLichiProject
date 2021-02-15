@@ -1,6 +1,10 @@
 <script lang=ts>
+import OpenCrypto from 'opencrypto';
+
     import { onMount } from 'svelte';
-    import { emailAddress, privateKey } from '../stores/user';
+    import { writable } from 'svelte/store';
+    import { emailAddress, publicKey, privateKey, runUnderUserStore } from '../stores/user';
+    import type { IUser, UserStore } from '../stores/user';
     import CreateUser from './CreateUser.svelte';
 
     let emailInput: HTMLInputElement;
@@ -8,11 +12,13 @@
     let emailAddressInvalid: boolean;
     let password: string;
     let passwordInvalid: boolean;
-    let creatingUser: boolean;
+    let createUserModalOpen : boolean;
+    let creatingUser = writable(false);
+    let loggingIn: boolean;
 
     onMount(() => emailInput.focus());
 
-    const login = () => {
+    const login = async () => {
         const error = (err: any) => {
             if (!feedback) {
                 feedback = err;
@@ -32,26 +38,69 @@
             error('Password is required');
             passwordInvalid = true;
         }
+
+        loggingIn = true;
+        try {
+            const existingUser = await runUnderUserStore(loginImplementation);
+            if (existingUser) {
+                $publicKey = existingUser.publicKey;
+
+                const crypt = new OpenCrypto();
+                
+                try {
+                    $privateKey = await crypt.decryptPrivateKey(
+                        existingUser.encryptedPrivateKey,
+                        password,
+                        {
+                            name:'RSA-OAEP',
+                            hash:'SHA-512',
+                            usages: [
+                                'decrypt',
+                                'unwrapKey'
+                            ],
+                            isExtractable:true
+                        });
+                } catch {
+                    feedback = 'Unable to decrypt private key with this password';
+                    passwordInvalid = true;
+                }
+            }
+        } catch (e) {
+            error(`Error: ${e && e.message || e}`);
+            throw(e);
+        } finally {
+            loggingIn = false;
+        }
     };
 
+    async function loginImplementation(userStore: UserStore): Promise<IUser> {
+        const lowercasedEmailAddress = $emailAddress.toLowerCase();
+        const existingUser = await userStore.getUser(lowercasedEmailAddress);
+        if (!existingUser) {
+            feedback = 'User not found with this email. Did you mean to create a new user?';
+            emailAddressInvalid = true;
+        }
+        return existingUser;
+    }
+
     const onKeyPress = (e: KeyboardEvent) => e.key === 'Enter' && login();
-    const createUser = () => creatingUser = true;
-    const closeUserCreation = () => creatingUser = false;
+    const createUser = () => createUserModalOpen = true;
+    const closeUserCreation = () => $creatingUser || (createUserModalOpen = false);
 </script>
 
 <fieldset>
     <legend>&nbsp;Existing user&nbsp;</legend>
     <label for=email>Email:</label>
     <input type=email id=email bind:value={ $emailAddress } on:keypress={ onKeyPress }
-           class:invalid={ emailAddressInvalid } disabled={ creatingUser }
+           class:invalid={ emailAddressInvalid } disabled={ createUserModalOpen || loggingIn }
            bind:this={ emailInput } />
     <br />
     <label for=password>Password:</label>
     <input type=password id=password bind:value={ password } on:keypress={ onKeyPress }
-           class:invalid={ passwordInvalid } disabled={ creatingUser } />
+           class:invalid={ passwordInvalid } disabled={ createUserModalOpen || loggingIn } />
     <br />
     <br />
-    <input type=button value=Login on:click={ login } disabled={ creatingUser } />
+    <input type=button value=Login on:click={ login } disabled={ createUserModalOpen || loggingIn } />
     { #if (feedback) }
         <br />
         <span />
@@ -63,8 +112,8 @@
 <button on:click={ createUser }>Create new user</button>
 <br />
 
-{ #if (creatingUser) }
-    <CreateUser close={ closeUserCreation } />
+{ #if (createUserModalOpen) }
+    <CreateUser close={ closeUserCreation } { creatingUser } />
 { /if }
 
 <style>    
