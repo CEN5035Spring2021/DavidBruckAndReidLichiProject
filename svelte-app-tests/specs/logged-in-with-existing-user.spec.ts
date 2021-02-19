@@ -4,16 +4,17 @@ describe('Created user is logged-in', () => {
     beforeAll(async() => {
         await page.goto('http://127.0.0.1:5000');
         const createNewUser = await page.$('button');
-        
+
         await createNewUser?.click();
-        
+
         const emailInput = await page.$('[ id="newEmail" ]');
         const passwordInput = await page.$('[ id="newPassword" ]');
         const confirmPasswordInput = await page.$('[ id="confirmPassword" ]');
-        
+        const password = 'MyT3stP@ss';
+
         await emailInput?.type('logged-in-with-existing-user@cen.5035');
-        await passwordInput?.type('MyT3stP@ss');
-        await confirmPasswordInput?.type('MyT3stP@ss');
+        await passwordInput?.type(password);
+        await confirmPasswordInput?.type(password);
     });
 
     it('Created user is logged-in', async () => {

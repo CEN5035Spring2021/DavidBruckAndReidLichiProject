@@ -4,9 +4,9 @@ describe('Created user is logged-in', () => {
     beforeAll(async() => {
         await page.goto('http://127.0.0.1:5000');
         const createNewUser = await page.$('button');
-        
+
         await createNewUser?.click();
-        
+
         const newEmailInput = await page.$('[ id="newEmail" ]');
         const newPasswordInput = await page.$('[ id="newPassword" ]');
         const confirmPasswordInput = await page.$('[ id="confirmPassword" ]');
@@ -14,11 +14,11 @@ describe('Created user is logged-in', () => {
         const createUserButton = await page.$(createUserButtonSelector);
         const emailAddress = 'created-user-is-logged-in@cen.5035';
         const password = 'MyT3stP@ss';
-        
+
         await newEmailInput?.type(emailAddress);
         await newPasswordInput?.type(password);
         await confirmPasswordInput?.type(password);
-        
+
         await createUserButton?.click();
         await page.waitForSelector(
             createUserButtonSelector,
@@ -27,7 +27,7 @@ describe('Created user is logged-in', () => {
                 timeout: 30000
             });
         await page.reload();
-        
+
         const emailInput = await page.$('[ id="email" ]');
         const passwordInput = await page.$('[ id="password" ]');
 
