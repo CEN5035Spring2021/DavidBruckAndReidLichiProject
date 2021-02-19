@@ -1,9 +1,10 @@
 import { teardown as teardownDevServer } from 'jest-dev-server';
 
-const { teardown: teardownPuppeteer }: { teardown: (_: any) => Promise<void> } =
-    require('jest-environment-puppeteer');
+type Config = unknown
+const teardownPuppeteer =
+    import('jest-environment-puppeteer') as unknown as Promise<{ teardown: (_: Config) => Promise<void> }>;
 
-export default async(globalConfig: any) => {
+export default async(globalConfig: Config) : Promise<void> => {
     await teardownDevServer();
-    return teardownPuppeteer(globalConfig);
+    return (await teardownPuppeteer).teardown(globalConfig);
 };

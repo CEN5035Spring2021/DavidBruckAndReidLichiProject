@@ -9,6 +9,10 @@
     export let close: () => void;
     export let creatingUser: Writable<boolean>;
 
+    const RSA_KEY_LENGTH = 4096;
+    const PASSWORD_SALT_ITERATIONS = 100_000;
+    const SHA_SIZE = 256;
+
     let emailInput: HTMLInputElement;
     let feedback: string;
     let localEmailAddress: string;
@@ -21,7 +25,7 @@
     onMount(() => emailInput.focus());
 
     const createUser = async () => {
-        const error = (err: any) => {
+        const error = (err: string) => {
             if (!feedback) {
                 feedback = err;
             }
@@ -35,12 +39,12 @@
             error('Email is required');
             emailAddressInvalid = true;
         }
-        
+    
         if (!password) {
             error('Password is required');
             passwordInvalid = true;
         }
-        
+    
         if (!confirmPassword) {
             error('Confirm password is required');
             confirmPasswordInvalid = true;
@@ -57,38 +61,38 @@
 
         $creatingUser = true;
         try {
-            // While it seems like it would be more efficient to skip creating the public/private key pair
-            // if we end up finding a duplicate user with the same email address, that would cause error:
-            // !! Failed to execute 'put' on 'IDBObjectStore': The transaction has finished
-            //
-            // This is because on the onsuccess callback from querying the existing user, we must synchronously
-            // start the next put request. Adding asynchronous OpenCrypto calls in between de-synchronizes it.
+        // While it seems like it would be more efficient to skip creating the public/private key pair
+        // if we end up finding a duplicate user with the same email address, that would cause error:
+        // !! Failed to execute 'put' on 'IDBObjectStore': The transaction has finished
+        //
+        // This is because on the onsuccess callback from querying the existing user, we must synchronously
+        // start the next put request. Adding asynchronous OpenCrypto calls in between de-synchronizes it.
 
             const crypt = new OpenCrypto();
             const keyPair = await crypt.getRSAKeyPair(
-                4096,
+                RSA_KEY_LENGTH,
                 'SHA-512',
                 'RSA-OAEP',
                 [
                     'encrypt',
                     'decrypt'
                 ],
-                true);
+                true) as { privateKey: CryptoKey, publicKey: CryptoKey };
 
             const encryptedPrivateKey = await crypt.encryptPrivateKey(
                 keyPair.privateKey,
                 password,
-                100_000,
+                PASSWORD_SALT_ITERATIONS,
                 'SHA-512',
                 'AES-GCM',
-                256);
+                SHA_SIZE) as string;
 
             await runUnderUserStore(createUserImplementation, {
                 encryptedPrivateKey,
                 keyPair
             });
         } catch (e) {
-            error(`Error: ${e && e.message || e}`);
+            error(`Error: ${e && (<{message: string}>e).message || <string>e}`);
             throw(e);
         } finally {
             $creatingUser = false;
@@ -100,8 +104,8 @@
     async function createUserImplementation(
         userStore: UserStore,
         state: {
-            keyPair: any,
-            encryptedPrivateKey: any
+            keyPair: { privateKey: CryptoKey, publicKey: CryptoKey },
+            encryptedPrivateKey: string
         }) {
 
         const lowercasedEmailAddress = localEmailAddress.toLowerCase();
