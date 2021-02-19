@@ -7,6 +7,11 @@
     <span title=Close on:click={ close }>x</span>
     <slot name=title />
     <slot name=content />
+
+    <!-- prevent error "received an unexpected slot 'default'" -->
+    { #if (false) }
+    <slot></slot>
+    { /if }
 </div>
 
 <style>

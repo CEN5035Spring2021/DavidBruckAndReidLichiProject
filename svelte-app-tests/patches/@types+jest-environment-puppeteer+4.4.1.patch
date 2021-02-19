@@ -1,0 +1,14 @@
+diff --git a/node_modules/@types/jest-environment-puppeteer/index.d.ts b/node_modules/@types/jest-environment-puppeteer/index.d.ts
+index 3f4d464..eb60543 100644
+--- a/node_modules/@types/jest-environment-puppeteer/index.d.ts
++++ b/node_modules/@types/jest-environment-puppeteer/index.d.ts
+@@ -7,7 +7,8 @@
+ 
+ import NodeEnvironment = require('jest-environment-node');
+ import { Global as GlobalType } from '@jest/types';
+-import { Browser, Page, BrowserContext } from 'puppeteer';
++import type { Browser, BrowserContext } from 'puppeteer/lib/cjs/puppeteer/common/Browser';
++import type { Page } from "puppeteer/lib/cjs/puppeteer/common/Page";
+ import { Context } from 'vm';
+ 
+ interface JestPuppeteer {
