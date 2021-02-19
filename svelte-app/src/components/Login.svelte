@@ -1,6 +1,5 @@
 <script lang=ts>
-import OpenCrypto from 'opencrypto';
-
+    import OpenCrypto from 'opencrypto';
     import { onMount } from 'svelte';
     import { writable } from 'svelte/store';
     import { emailAddress, publicKey, privateKey, runUnderUserStore } from '../stores/user';
@@ -19,7 +18,7 @@ import OpenCrypto from 'opencrypto';
     onMount(() => emailInput.focus());
 
     const login = async () => {
-        const error = (err: any) => {
+        const error = (err: string) => {
             if (!feedback) {
                 feedback = err;
             }
@@ -33,7 +32,7 @@ import OpenCrypto from 'opencrypto';
             error('Email is required');
             emailAddressInvalid = true;
         }
-        
+    
         if (!password) {
             error('Password is required');
             passwordInvalid = true;
@@ -46,9 +45,9 @@ import OpenCrypto from 'opencrypto';
                 $publicKey = existingUser.publicKey;
 
                 const crypt = new OpenCrypto();
-                
+    
                 try {
-                    $privateKey = await crypt.decryptPrivateKey(
+                    $privateKey = (<CryptoKey> await crypt.decryptPrivateKey(
                         existingUser.encryptedPrivateKey,
                         password,
                         {
@@ -59,14 +58,14 @@ import OpenCrypto from 'opencrypto';
                                 'unwrapKey'
                             ],
                             isExtractable:true
-                        });
+                        }));
                 } catch {
                     feedback = 'Unable to decrypt private key with this password';
                     passwordInvalid = true;
                 }
             }
         } catch (e) {
-            error(`Error: ${e && e.message || e}`);
+            error(`Error: ${e && (<{message: string}>e).message || <string>e}`);
             throw(e);
         } finally {
             loggingIn = false;
@@ -74,7 +73,7 @@ import OpenCrypto from 'opencrypto';
     };
 
     async function loginImplementation(userStore: UserStore): Promise<IUser> {
-        const lowercasedEmailAddress = $emailAddress.toLowerCase();
+        const lowercasedEmailAddress = (<string>($emailAddress)).toLowerCase();
         const existingUser = await userStore.getUser(lowercasedEmailAddress);
         if (!existingUser) {
             feedback = 'User not found with this email. Did you mean to create a new user?';
@@ -85,7 +84,7 @@ import OpenCrypto from 'opencrypto';
 
     const onKeyPress = (e: KeyboardEvent) => e.key === 'Enter' && login();
     const createUser = () => createUserModalOpen = true;
-    const closeUserCreation = () => $creatingUser || (createUserModalOpen = false);
+    const closeUserCreation = () => (<boolean>($creatingUser)) || (createUserModalOpen = false);
 </script>
 
 <fieldset>
@@ -116,7 +115,7 @@ import OpenCrypto from 'opencrypto';
     <CreateUser close={ closeUserCreation } { creatingUser } />
 { /if }
 
-<style>    
+<style>
     legend {
         font-size: 1.3em;
         font-weight: 700;

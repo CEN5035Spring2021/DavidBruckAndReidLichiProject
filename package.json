@@ -1,0 +1,32 @@
+{
+  "name": "cen5035spring2021davidbruckandreidlichiproject",
+  "version": "1.0.0",
+  "description": "https://www.pivotaltracker.com/n/projects/2488115",
+  "dependencies": {},
+  "devDependencies": {
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint": "^7.20.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-svelte3": "^3.1.1",
+    "pre-commit": "^1.2.2",
+    "svelte": "^3.32.3",
+    "typescript": "^4.1.5"
+  },
+  "pre-commit": {
+    "run": "lint",
+    "silent": true
+  },
+  "scripts": {
+    "lint": "npm run --prefix ./svelte-app lint && npm run --prefix ./svelte-app-tests lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CEN5035Spring2021/DavidBruckAndReidLichiProject.git"
+  },
+  "author": "David Bruck dbruck1@fau.edu and Reid Lichi rlichi2013@fau.edu",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/CEN5035Spring2021/DavidBruckAndReidLichiProject/issues"
+  },
+  "homepage": "https://github.com/CEN5035Spring2021/DavidBruckAndReidLichiProject#readme"
+}

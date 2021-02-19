@@ -6,7 +6,7 @@
     import '../node_modules/core-js-bundle/minified';
 </script>
 
-<script lang=ts>
+<script lang="ts">
     import Footer from './components/Footer.svelte';
     import Login from './components/Login.svelte';
     import { privateKey } from './stores/user';
@@ -15,7 +15,7 @@
 <h1>
     Secure Group Messenger
     <br />
-    <small>CEN5035 Spring 2021 David Bruck Project</small>
+    <small>CEN5035 Spring 2021 David Bruck and Reid Lichi Project</small>
 </h1>
 { #if ($privateKey) }
     <b>Logged in!</b>
