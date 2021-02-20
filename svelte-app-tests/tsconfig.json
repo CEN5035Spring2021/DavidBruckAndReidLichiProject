@@ -72,6 +72,7 @@
     "specs/**/*",
     "types/**/*",
     "jest.config.js",
-    "jest.setup.ts"
+    "jest.setup.ts",
+    ".eslintrc.js"
   ]
 }
