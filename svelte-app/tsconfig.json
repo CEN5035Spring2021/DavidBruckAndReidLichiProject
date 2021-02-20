@@ -2,7 +2,8 @@
   "extends": "@tsconfig/svelte/tsconfig.json",
 
   "include": [
-    "src/**/*"
+    "src/**/*",
+    ".eslintrc.js"
   ],
   "exclude": [
     "node_modules/*",
