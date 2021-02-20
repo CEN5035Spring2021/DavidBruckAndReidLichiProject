@@ -7,41 +7,23 @@ describe('Created user is logged-in', () => {
 
         await createNewUser?.click();
 
-        const newEmailInput = await page.$('[ id="newEmail" ]');
-        const newPasswordInput = await page.$('[ id="newPassword" ]');
+        const emailInput = await page.$('[ id="newEmail" ]');
+        const passwordInput = await page.$('[ id="newPassword" ]');
         const confirmPasswordInput = await page.$('[ id="confirmPassword" ]');
-        const createUserButtonSelector = '.modal > div > input[ type="button" ]';
-        const createUserButton = await page.$(createUserButtonSelector);
-        const emailAddress = 'created-user-is-logged-in@cen.5035';
         const password = 'MyT3stP@ss';
 
-        await newEmailInput?.type(emailAddress);
-        await newPasswordInput?.type(password);
+        await emailInput?.type('logged-in-with-existing-user@cen.5035');
+        await passwordInput?.type(password);
         await confirmPasswordInput?.type(password);
+    });
+
+    it('Created user is logged-in', async () => {
+        const createUserButtonSelector = '.modal > div > input[ type="button" ]';
+        const createUserButton = await page.$(createUserButtonSelector);
 
         await createUserButton?.click();
         await page.waitForSelector(
             createUserButtonSelector,
-            {
-                hidden: true,
-                timeout: 30000
-            });
-        await page.reload();
-
-        const emailInput = await page.$('[ id="email" ]');
-        const passwordInput = await page.$('[ id="password" ]');
-
-        await emailInput?.type(emailAddress);
-        await passwordInput?.type(password);
-    });
-
-    it('Created user is logged-in', async () => {
-        const loginButtonSelector = 'fieldset > input[ type="button" ]';
-        const loginButton = await page.$(loginButtonSelector);
-
-        await loginButton?.click();
-        await page.waitForSelector(
-            loginButtonSelector,
             {
                 hidden: true,
                 timeout: 30000
