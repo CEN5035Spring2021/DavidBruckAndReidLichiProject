@@ -1,0 +1,52 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: 15.x
+
+    - name: Install root dependencies
+      working-directory: ./
+      run: npm ci
+    
+    - name: Install svelte-app dependencies
+      working-directory: ./svelte-app
+      run: npm ci
+
+    - name: Install svelte-app-tests dependencies
+      working-directory: ./svelte-app-tests
+      run: npm ci
+
+    - name: Check svelte-app
+      working-directory: ./svelte-app
+      run: npm run validate
+
+    - name: Build svelte-app
+      working-directory: ./svelte-app
+      run: npm run build
+
+    - name: Lint svelte-app and svelte-app-tests
+      working-directory: ./
+      run: npm run lint
+    
+    - name: Test svelte-app
+      working-directory: ./svelte-app-tests
+      run: npm test
+    env:
+      CI: true
