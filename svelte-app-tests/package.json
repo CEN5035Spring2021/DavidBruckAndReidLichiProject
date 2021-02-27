@@ -1,8 +1,6 @@
 {
   "name": "svelte-app-tests",
   "version": "1.0.0",
-  "description": "",
-  "main": "\"\"",
   "dependencies": {},
   "devDependencies": {
     "@types/expect-puppeteer": "^4.4.5",
