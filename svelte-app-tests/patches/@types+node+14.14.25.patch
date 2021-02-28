@@ -1,0 +1,12 @@
+diff --git a/node_modules/@types/node/http.d.ts b/node_modules/@types/node/http.d.ts
+index 4daa055..9a9b82d 100644
+--- a/node_modules/@types/node/http.d.ts
++++ b/node_modules/@types/node/http.d.ts
+@@ -215,6 +215,7 @@ declare module "http" {
+         aborted: boolean;
+         host: string;
+         protocol: string;
++        reusedSocket: boolean;
+ 
+         constructor(url: string | URL | ClientRequestArgs, cb?: (res: IncomingMessage) => void);
+ 
