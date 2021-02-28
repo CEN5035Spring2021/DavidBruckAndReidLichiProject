@@ -1,0 +1,29 @@
+# Node.js
+# Build a general Node.js project with npm.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '15.x'
+  displayName: 'Install Node.js'
+
+- script: |
+    npm install --prefix ./svelte-app
+    npm run --prefix build
+  displayName: 'npm install and build'
+
+- task: AzureFileCopy@4
+  inputs:
+    SourcePath: '$(Build.SourcesDirectory)/svelte-app-public/*'
+    azureSubscription: 'Azure for Students(3e586571-9988-4808-8656-94d9d2bc0639)'
+    Destination: 'AzureBlob'
+    storage: 'cen5035spring2021dbruck'
+    ContainerName: '$web'
