@@ -1,0 +1,23 @@
+{
+  "name": "azure-functions",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc",
+    "build:production": "npm run prestart && npm prune --production",
+    "watch": "tsc --w",
+    "prestart": "npm run build && func extensions install",
+    "start:host": "func start",
+    "start": "npm-run-all --parallel start:host watch",
+    "test": "echo \"No tests yet...\"",
+    "lint": "eslint */**/*.{js,json,ts} --fix --max-warnings 0",
+    "lint-nofix": "eslint */**/*.{js,json,ts} --max-warnings 0"
+  },
+  "devDependencies": {
+    "@azure/functions": "^1.0.1-beta1",
+    "@typescript-eslint/eslint-plugin": "^4.15.2",
+    "eslint": "^7.21.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^4.2.2"
+  },
+  "dependencies": {}
+}

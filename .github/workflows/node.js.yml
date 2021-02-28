@@ -29,6 +29,10 @@ jobs:
       working-directory: ./svelte-app
       run: npm ci
 
+    - name: Install azure-functions dependencies
+      working-directory: ./azure-functions
+      run: npm ci && npm i azure-functions-core-tools
+
     - name: Install svelte-app-tests dependencies
       working-directory: ./svelte-app-tests
       run: npm ci
@@ -37,15 +41,11 @@ jobs:
       working-directory: ./svelte-app
       run: npm run validate
 
-    - name: Build svelte-app
-      working-directory: ./svelte-app
-      run: npm run build
-
-    - name: Lint svelte-app and svelte-app-tests
+    - name: Lint svelte-app and azure-functions and svelte-app-tests
       working-directory: ./
-      run: npm run lint
+      run: npm run lint-nofix
     
-    - name: Test svelte-app
+    - name: Build and test svelte-app and azure-functions
       working-directory: ./svelte-app-tests
       run: npm test
     env:
