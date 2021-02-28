@@ -1,10 +1,7 @@
 module.exports = {
     extends: [
-        'eslint:recommended',
-        'plugin:@typescript-eslint/recommended',
-        'plugin:@typescript-eslint/recommended-requiring-type-checking'
+        'eslint:recommended'
     ],
-    parser: '@typescript-eslint/parser',
     parserOptions: {
         tsconfigRootDir: __dirname
     },
@@ -24,6 +21,10 @@ module.exports = {
             {
                 SwitchCase: 1
             }
+        ],
+        'jsonc/indent': [
+            'error',
+            2
         ],
         '@typescript-eslint/consistent-type-imports': [
             'error',
@@ -54,7 +55,7 @@ module.exports = {
         ],
         'quote-props': [
             'error',
-            'consistent-as-needed'
+            'as-needed'
         ],
         'max-len': [
             'error',
@@ -71,18 +72,32 @@ module.exports = {
     overrides: [
         {
             files: [
-                '*.ts',
-                '*.json'
+                '*.ts'
             ],
+            parser: '@typescript-eslint/parser',
             extends: [
-                'plugin:@typescript-eslint/recommended'
+                'plugin:@typescript-eslint/recommended',
+                'plugin:@typescript-eslint/recommended-requiring-type-checking'
             ]
         },
         {
             files: [
                 '*.svelte'
             ],
-            processor: 'svelte3/svelte3'
+            parser: '@typescript-eslint/parser',
+            processor: 'svelte3/svelte3',
+            extends: [
+                'plugin:@typescript-eslint/recommended',
+                'plugin:@typescript-eslint/recommended-requiring-type-checking'
+            ]
+        },
+        {
+            files: [
+                '*.json'
+            ],
+            extends: [
+                'plugin:jsonc/recommended-with-jsonc'
+            ]
         }
     ],
     settings: {

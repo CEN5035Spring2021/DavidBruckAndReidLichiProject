@@ -1,0 +1,24 @@
+diff --git a/node_modules/@types/jest-dev-server/index.d.ts b/node_modules/@types/jest-dev-server/index.d.ts
+index ede5f46..ea260d9 100644
+--- a/node_modules/@types/jest-dev-server/index.d.ts
++++ b/node_modules/@types/jest-dev-server/index.d.ts
+@@ -118,6 +118,10 @@ export interface JestDevServerOptions {
+      * }
+      */
+     waitOnScheme?: Partial<WaitOnOptions>;
++
++    serversStarted: {
++        started: boolean
++    }
+ }
+ 
+ export const ERROR_TIMEOUT: 'ERROR_TIMEOUT';
+@@ -125,7 +129,7 @@ export const ERROR_PORT_USED: 'ERROR_PORT_USED';
+ export const ERROR_NO_COMMAND: 'ERROR_NO_COMMAND';
+ 
+ export function setup(
+-    options: JestDevServerOptions | JestDevServerOptions[],
++    options: JestDevServerOptions | JestDevServerOptions[]
+ ): Promise<void>;
+ export function teardown(): Promise<void>;
+ export function getServers(): ChildProcess[];

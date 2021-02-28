@@ -1,0 +1,49 @@
+diff --git a/node_modules/jest-dev-server/lib/global.js b/node_modules/jest-dev-server/lib/global.js
+index d789078..08621c3 100644
+--- a/node_modules/jest-dev-server/lib/global.js
++++ b/node_modules/jest-dev-server/lib/global.js
+@@ -20,6 +20,7 @@ var _waitOn = _interopRequireDefault(require("wait-on"));
+ 
+ var _findProcess = _interopRequireDefault(require("find-process"));
+ 
++const { exit } = require("process");
+ var _util = require("util");
+ 
+ var _treeKill = _interopRequireDefault(require("tree-kill"));
+@@ -87,11 +88,31 @@ function runServer(config = {}, index) {
+     cwd: (0, _cwd.default)()
+   }, config.options));
+ 
+-  if (config.debug) {
+-    // eslint-disable-next-line no-console
+-    console.log(_chalk.default.magentaBright('\nJest dev-server output:'));
+-    servers[index].stdout.pipe(serverLogPrefixer).pipe(process.stdout);
+-  }
++  const buffers = []
++  servers[index].stdout.pipe(serverLogPrefixer).on('data', data => buffers.push({
++    data,
++    isError: false
++  }));
++  servers[index].stderr.pipe(serverLogPrefixer).on('data', data => buffers.push({
++    data,
++    isError: true
++  }));
++
++  servers[index].on('exit', code => {
++    if (config.serversStarted && !config.serversStarted.started || config.debug) {
++      if (config.debug) {
++        // eslint-disable-next-line no-console
++        console.log(_chalk.default.magentaBright('\nJest dev-server output:'));
++      }
++      for (const buffer of buffers) {
++        process[buffer.isError ? 'stderr' : 'stdout'].write(buffer.data);
++      }
++    }
++    
++    if (config.serversStarted && !config.serversStarted.started) {
++      exit(code || 1);
++    }
++  })
+ }
+ 
+ async function outOfStin(block) {
