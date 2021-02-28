@@ -7,7 +7,7 @@ trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: windows-latest
 
 steps:
 - task: NodeTool@0
@@ -17,12 +17,12 @@ steps:
 
 - script: |
     npm install --prefix ./svelte-app
-    npm run --prefix build
+    npm run --prefix ./svelte-app build
   displayName: 'npm install and build'
 
 - task: AzureFileCopy@4
   inputs:
-    SourcePath: '$(Build.SourcesDirectory)/svelte-app-public/*'
+    SourcePath: '$(Build.SourcesDirectory)/svelte-app/public/*'
     azureSubscription: 'Azure for Students(3e586571-9988-4808-8656-94d9d2bc0639)'
     Destination: 'AzureBlob'
     storage: 'cen5035spring2021dbruck'
