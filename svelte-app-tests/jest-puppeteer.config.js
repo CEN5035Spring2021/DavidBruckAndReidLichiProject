@@ -4,9 +4,15 @@ module.exports = {
     launch: {
         dumpio: true,
         headless: process.env.HEADLESS !== 'false',
-        args: [
-            '--disable-infobars'
-        ]
+        args: process.env.CI !== 'true'
+            ? [
+                '--disable-infobars'
+            ]
+            : [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-infobars'
+            ]
     },
     browserContext: 'default'
 };

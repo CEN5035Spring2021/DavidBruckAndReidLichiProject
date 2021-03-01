@@ -91,6 +91,7 @@ describe('Echo Azure Function echoes', () => {
             }
         });
 
+        requestBody.bodyMixed = [];
         expect(response).toBe(JSON.stringify({
             query: requestSearchParams.expectedQuery,
             body: requestBody
