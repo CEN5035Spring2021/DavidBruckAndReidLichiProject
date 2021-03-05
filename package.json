@@ -8,17 +8,19 @@
     "eslint": "^7.20.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jsonc": "^1.1.0",
     "eslint-plugin-svelte3": "^3.1.1",
     "pre-commit": "^1.2.2",
     "svelte": "^3.32.3",
     "typescript": "^4.1.5"
   },
   "pre-commit": {
-    "run": "lint",
+    "run": "lint-nofix",
     "silent": true
   },
   "scripts": {
-    "lint": "npm run --prefix ./svelte-app lint && npm run --prefix ./svelte-app-tests lint"
+    "lint": "npm run --prefix ./svelte-app lint && npm run --prefix ./svelte-app-tests lint && npm run --prefix ./azure-functions lint",
+    "lint-nofix": "npm run --prefix ./svelte-app lint-nofix && npm run --prefix ./svelte-app-tests lint-nofix && npm run --prefix ./azure-functions lint-nofix"
   },
   "repository": {
     "type": "git",

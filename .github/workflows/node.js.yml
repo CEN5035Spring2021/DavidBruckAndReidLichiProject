@@ -16,10 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Use Node.js 15.x
+    - name: Use Node.js 12.x
       uses: actions/setup-node@v1
       with:
-        node-version: 15.x
+        node-version: 12.x
 
     - name: Install root dependencies
       working-directory: ./
@@ -33,19 +33,19 @@ jobs:
       working-directory: ./svelte-app-tests
       run: npm ci
 
+    - name: Install azure-functions dependencies
+      working-directory: ./azure-functions
+      run: npm ci && npm i azure-functions-core-tools
+
     - name: Check svelte-app
       working-directory: ./svelte-app
       run: npm run validate
 
-    - name: Build svelte-app
-      working-directory: ./svelte-app
-      run: npm run build
-
-    - name: Lint svelte-app and svelte-app-tests
+    - name: Lint svelte-app and svelte-app-tests and azure-functions
       working-directory: ./
       run: npm run lint
     
-    - name: Test svelte-app
+    - name: Test svelte-app and azure-functions
       working-directory: ./svelte-app-tests
       run: npm test
     env:
