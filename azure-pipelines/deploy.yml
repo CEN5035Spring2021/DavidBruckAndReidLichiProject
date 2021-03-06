@@ -14,19 +14,35 @@ pool:
 steps:
 - task: NodeTool@0
   inputs:
-    versionSpec: '12.x'
-  displayName: 'Install Node.js'
+    versionSpec: 12.x
+  displayName: Install Node.js
+
+- script: choco install azure-functions-core-tools-3 -y --params "'/x64'"
+  displayName: choco install azure-functions-core-tools
 
 - script: |
     npm ci
     npm run build
-  displayName: 'npm install and build'
+  displayName: npm install and build svelte-app
   workingDirectory: ./svelte-app
 
-- task: AzureFileCopy@4
+- task: AzureCLI@2
+  displayName: Build and publish azure-functions
   inputs:
-    SourcePath: '$(Build.SourcesDirectory)/svelte-app/public/*'
-    azureSubscription: 'Azure for Students(3e586571-9988-4808-8656-94d9d2bc0639)'
-    Destination: 'AzureBlob'
-    storage: 'cen5035spring2021dbruck'
-    ContainerName: '$web'
+    azureSubscription: Azure for Students(3e586571-9988-4808-8656-94d9d2bc0639)
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      npm ci
+      npm run build:production
+      func azure functionapp publish CEN5035Spring2021DavidBruckProject --no-build --javascript --force
+    workingDirectory: ./azure-functions
+
+- task: AzureFileCopy@4
+  displayName: Publish svelte-app
+  inputs:
+    SourcePath: $(Build.SourcesDirectory)/svelte-app/public/*
+    azureSubscription: Azure for Students(3e586571-9988-4808-8656-94d9d2bc0639)
+    Destination: AzureBlob
+    storage: cen5035spring2021dbruck
+    ContainerName: $web
