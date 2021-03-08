@@ -9,12 +9,19 @@
             "request": "launch",
             "name": "Debug svelte-app-tests",
             "skipFiles": [
-                "<node_internals>/**"
+                "<node_internals>/**",
+                "${workspaceRoot}/node_modules/isexe/**",
+                "${workspaceRoot}/node_modules/resolve/**",
+                "${workspaceRoot}/node_modules/rx/dist/rx.js",
+                "${workspaceRoot}/node_modules/core-js/modules/_fails-is-regexp.js",
+                "${workspaceRoot}/node_modules/uuid/dist/v35.js"
             ],
             "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
             "env": {
                 "HEADLESS": "false",
-                "DEBUG": "true"
+                "DEBUG": "true",
+                "CEN5035Spring2021DavidBruckProjectCosmosDBURI": "https://localhost:8081",
+                "CEN5035Spring2021DavidBruckProjectCosmosDBKey": "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
             },
             "args": [
                 "${fileBasename}",

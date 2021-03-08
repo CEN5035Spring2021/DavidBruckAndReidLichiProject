@@ -67,6 +67,12 @@ module.exports = {
         semi: [
             'error',
             'always'
+        ],
+        '@typescript-eslint/array-type': [
+            'error',
+            {
+                default: 'array-simple'
+            }
         ]
     },
     overrides: [
