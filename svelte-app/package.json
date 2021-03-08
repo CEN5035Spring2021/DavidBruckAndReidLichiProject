@@ -5,7 +5,7 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "start": "sirv public",
-    "validate": "svelte-check",
+    "validate": "svelte-check --fail-on-warnings",
     "lint": "eslint */**/*.{js,json,ts,svelte} --fix --max-warnings 0",
     "lint-nofix": "eslint */**/*.{js,json,ts,svelte} --max-warnings 0"
   },

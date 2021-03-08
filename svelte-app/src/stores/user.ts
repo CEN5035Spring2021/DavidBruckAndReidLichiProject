@@ -50,19 +50,29 @@ export class UserStore {
         const connection = db.result;
         const transaction = connection.transaction(storeName, 'readwrite');
         let transactionComplete: boolean;
-        transaction.oncomplete = () => {
-            transactionComplete = true;
-            connection.close();
-        };
+        const complete = new Promise<void>((resolve, reject) => {
+            try {
+                transaction.oncomplete = () => {
+                    transactionComplete = true;
+                    connection.close();
+                    resolve();
+                };
+            } catch (e) {
+                reject(e);
+            }
+        });
+        let result: TResult;
         try {
             const objectStore = transaction.objectStore(storeName);
 
-            return await callback(new UserStore(objectStore), state);
+            result = await callback(new UserStore(objectStore), state);
         } finally {
             if (!transactionComplete && typeof transaction.commit === 'function') {
                 transaction.commit();
             }
         }
+        await complete;
+        return result;
     }
 }
 
