@@ -50,7 +50,7 @@ export default async(globalConfig: Config) : Promise<void> => {
             err => err ? reject(err) : resolve()));
 
         const cosmosExists = await runCommandAsync(
-            'docker inspect --type=image mcr.microsoft.com/cosmosdb/windows/azure-cosmos-emulator',
+            'docker inspect --type=image mcr.microsoft.com/cosmosdb/winsrv2019/azure-cosmos-emulator',
             {
                 errorCodeToResponses: {
                     1: false
@@ -58,18 +58,22 @@ export default async(globalConfig: Config) : Promise<void> => {
             });
 
         if (!cosmosExists) {
-            await runCommandAsync('docker pull microsoft/azure-cosmosdb-emulator', { verbose: true });
+            await runCommandAsync(
+                'docker pull mcr.microsoft.com/cosmosdb/winsrv2019/azure-cosmos-emulator',
+                {
+                    verbose: true
+                });
         }
 
         servers.push({
-            command: 'docker run --name azure-cosmosdb-emulator --rm --memory 2GB -v ' +
+            command: 'powershell docker run --name azure-cosmosdb-emulator --rm --memory 2GB -v ' +
                 `${cosmosDBTempPath}:C:\\CosmosDB.Emulator\\bind-mount ` +
                 '-p 8081:8081 -p 8900:8900 -p 8901:8901 -p 8902:8902 -p 10250:10250 -p 10251:10251 ' +
                 '-p 10252:10252 -p 10253:10253 -p 10254:10254 -p 10255:10255 -p 10256:10256 -p 10350:10350 ' +
-                '-i mcr.microsoft.com/cosmosdb/windows/azure-cosmos-emulator',
+                '-i mcr.microsoft.com/cosmosdb/winsrv2019/azure-cosmos-emulator',
             protocol: 'https',
             port: 8081,
-            launchTimeout: 300000, // 300 seconds
+            launchTimeout: 60000, // 60 seconds
             waitOnScheme: {
                 strictSSL: false,
                 headers: cosmosDBAuthorizationHeaders
@@ -110,7 +114,7 @@ export default async(globalConfig: Config) : Promise<void> => {
                 : 'npm run prestart --prefix ../azure-functions && npm run start:host --prefix ../azure-functions',
             protocol: 'http',
             port: 7071,
-            launchTimeout: 30000 + (isCI ? 300000 : 0), // 30 seconds (plus more for GitHub Actions)
+            launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
             serversStarted
         },
         {
@@ -119,7 +123,7 @@ export default async(globalConfig: Config) : Promise<void> => {
                 : 'npm run dev --prefix ../svelte-app',
             protocol: 'http',
             port: 5000,
-            launchTimeout: 30000 + (isCI ? 300000 : 0), // 30 seconds (plus more for GitHub Actions)
+            launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
             serversStarted
         });
 

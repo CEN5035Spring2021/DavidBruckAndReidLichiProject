@@ -1,0 +1,22 @@
+diff --git a/node_modules/wait-on/lib/wait-on.js b/node_modules/wait-on/lib/wait-on.js
+index f0a2f8d..ff8306a 100644
+--- a/node_modules/wait-on/lib/wait-on.js
++++ b/node_modules/wait-on/lib/wait-on.js
+@@ -268,6 +268,7 @@ function createFile$(file) {
+ }
+ 
+ function createHttp$(url, options) {
++  console.log(`wait-on, head request: ${url}, options.headers: ${JSON.stringify(options.headers)}`);
+   return Rx.Observable.catch(
+     head(url, parseHttpOptions(options)),
+     Rx.Observable.just([{statusCode: 999}])
+@@ -275,6 +276,9 @@ function createHttp$(url, options) {
+   .map(function (response) {
+     // Why is response in array here?
+     var statusCode = response[0].statusCode;
++    if (statusCode != 999) {
++      console.log(`wait-on, head response: ${url}, code: ${statusCode}`);
++    }
+     return {
+       // request will handle redirects before returning
+       // anything but 2XX is a failure
