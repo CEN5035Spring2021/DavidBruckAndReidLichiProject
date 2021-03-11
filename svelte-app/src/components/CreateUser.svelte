@@ -91,6 +91,10 @@
                 encryptedPrivateKey,
                 keyPair
             });
+
+            emailAddress.set(localEmailAddress);
+            publicKey.set(keyPair.publicKey);
+            privateKey.set(keyPair.privateKey);
         } catch (e) {
             error(`Error: ${e && (<{message: string}>e).message || <string>e}`);
             throw(e);
@@ -121,10 +125,6 @@
                     encryptedPrivateKey: state.encryptedPrivateKey,
                     publicKey: state.keyPair.publicKey
                 });
-
-                emailAddress.set(localEmailAddress);
-                publicKey.set(state.keyPair.publicKey);
-                privateKey.set(state.keyPair.privateKey);
             });
         if (existingUser) {
             feedback = 'User already exists with this Email';

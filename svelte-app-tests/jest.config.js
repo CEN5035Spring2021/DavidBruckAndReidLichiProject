@@ -15,8 +15,7 @@ module.exports = {
         '^.+\\.ts$': 'ts-jest'
     },
     moduleDirectories: [
-        'node_modules',
-        './'
+        'node_modules'
     ],
     moduleFileExtensions: [
         'ts',
@@ -26,5 +25,8 @@ module.exports = {
     ],
     globalSetup: '<rootDir>/config/global-setup.ts',
     globalTeardown: '<rootDir>/config/global-teardown.ts',
+    globals: {
+        tsConfig: '<rootDir>/tsconfig.json'
+    },
     testTimeout: 120000
 };

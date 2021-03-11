@@ -1,5 +1,5 @@
 diff --git a/node_modules/@types/jest-dev-server/index.d.ts b/node_modules/@types/jest-dev-server/index.d.ts
-index ede5f46..ea260d9 100644
+index ede5f46..a98c59c 100644
 --- a/node_modules/@types/jest-dev-server/index.d.ts
 +++ b/node_modules/@types/jest-dev-server/index.d.ts
 @@ -118,6 +118,10 @@ export interface JestDevServerOptions {
@@ -9,7 +9,7 @@ index ede5f46..ea260d9 100644
 +
 +    serversStarted: {
 +        started: boolean
-+    }
++    };
  }
  
  export const ERROR_TIMEOUT: 'ERROR_TIMEOUT';

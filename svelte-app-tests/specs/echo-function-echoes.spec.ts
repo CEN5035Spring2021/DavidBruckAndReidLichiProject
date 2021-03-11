@@ -1,5 +1,5 @@
-import http from 'http';
-import url from 'url';
+import * as http from 'http';
+import * as url from 'url';
 
 describe('Echo Azure Function echoes', () => {
     it('Echo should return request values', async () => {
@@ -57,7 +57,7 @@ describe('Echo Azure Function echoes', () => {
             bodyNumber: 4
         };
         const requestBodyString = JSON.stringify(requestBody);
-        const response = await new Promise<string>((resolve, reject) => {
+        const response = await new Promise<{ data: string, statusCode?: number }>((resolve, reject) => {
             makeRequest();
 
             function makeRequest() {
@@ -73,8 +73,9 @@ describe('Echo Azure Function echoes', () => {
                 }, response => {
                     let data = '';
                     let error: Error;
+                    const statusCode = response.statusCode;
                     response.on('data', innerData => data += innerData);
-                    response.on('end', () => !error && resolve(data));
+                    response.on('end', () => !error && resolve({ data, statusCode }));
                     response.on('error', (err) => reject(error = err));
                 });
 
@@ -91,7 +92,8 @@ describe('Echo Azure Function echoes', () => {
             }
         });
 
-        expect(response).toBe(JSON.stringify({
+        expect(response.statusCode).toBe(200);
+        expect(response.data).toBe(JSON.stringify({
             query: requestSearchParams.expectedQuery,
             body: requestBody
         }));
