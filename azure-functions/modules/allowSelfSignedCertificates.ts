@@ -1,4 +1,4 @@
-import * as api from 'win-ca/api';
+import api = require('win-ca/api');
 import * as tls from 'tls';
 
 const roots: string[] = [];
@@ -19,7 +19,7 @@ export default function allowSelfSignedCertificates(): void {
         });
 
         const createSecureContext = tls.createSecureContext;
-        (<{ createSecureContext: (options: tls.SecureContextOptions) => tls.SecureContext }>tls).createSecureContext =
+        (tls as { createSecureContext: (options: tls.SecureContextOptions) => tls.SecureContext }).createSecureContext =
             options => {
                 if (!options.ca && roots.length) {
                     options.ca = tls.rootCertificates.concat(roots);

@@ -2,7 +2,9 @@
     import OpenCrypto from 'opencrypto';
     import { onMount } from 'svelte';
     import { writable } from 'svelte/store';
-    import { emailAddress, publicKey, privateKey, runUnderUserStore } from '../stores/user';
+    import {
+        emailAddress, encryptionPrivateKey, encryptionPublicKey, signingPrivateKey, signingPublicKey, runUnderUserStore
+    } from '../stores/user';
     import type { IUser, UserStore } from '../stores/user';
     import CreateUser from './CreateUser.svelte';
 
@@ -41,39 +43,83 @@
         loggingIn = true;
         try {
             const existingUser = await runUnderUserStore(loginImplementation);
-            if (existingUser) {
-                $publicKey = existingUser.publicKey;
+            if (existingUser
+                && existingUser.lowercasedEmailAddress
+                && existingUser.encryptedEncryptionKey
+                && existingUser.encryptedSigningKey) {
 
                 const crypt = new OpenCrypto();
-    
+
                 try {
-                    $privateKey = (<CryptoKey> await crypt.decryptPrivateKey(
-                        existingUser.encryptedPrivateKey,
+                    const tempEncryptionPrivateKey = await crypt.decryptPrivateKey(
+                        existingUser.encryptedEncryptionKey,
                         password,
                         {
-                            name:'RSA-OAEP',
-                            hash:'SHA-512',
+                            name: 'RSA-OAEP',
+                            hash: 'SHA-512',
                             usages: [
                                 'decrypt',
                                 'unwrapKey'
                             ],
-                            isExtractable:true
-                        }));
+                            isExtractable: true
+                        }) as CryptoKey;
+                    const tempEncryptionPublicKey = await crypt.getPublicKey(
+                        tempEncryptionPrivateKey,
+                        {
+                            name: 'RSA-OAEP',
+                            hash: {
+                                name: 'SHA-512'
+                            },
+                            usages: [
+                                'encrypt'
+                            ],
+                            isExtractable: true
+                        }) as CryptoKey;
+
+                    const tempSigningPrivateKey = await crypt.decryptPrivateKey(
+                        existingUser.encryptedSigningKey,
+                        password,
+                        {
+                            name: 'RSA-PSS',
+                            hash: 'SHA-512',
+                            usages: [
+                                'sign'
+                            ],
+                            isExtractable: true
+                        }) as CryptoKey;
+                    const tempSigningPublicKey = await crypt.getPublicKey(
+                        tempSigningPrivateKey,
+                        {
+                            name: 'RSA-PSS',
+                            hash: {
+                                name: 'SHA-512'
+                            },
+                            usages: [
+                                'verify'
+                            ],
+                            isExtractable: true
+                        }) as CryptoKey;
+
+                    $encryptionPrivateKey = tempEncryptionPrivateKey;
+                    $encryptionPublicKey = tempEncryptionPublicKey;
+                    $signingPrivateKey = tempSigningPrivateKey;
+                    $signingPublicKey = tempSigningPublicKey;
                 } catch {
                     feedback = 'Unable to decrypt private key with this password';
                     passwordInvalid = true;
                 }
             }
         } catch (e) {
-            error(`Error: ${e && (<{message: string}>e).message || <string>e}`);
+            error(`Error: ${e && (e as {message: string}).message || e as string}`);
             throw(e);
         } finally {
             loggingIn = false;
         }
     };
+    const safeLogin = () => login().catch(console.error);
 
     async function loginImplementation(userStore: UserStore): Promise<IUser> {
-        const lowercasedEmailAddress = (<string>($emailAddress)).toLowerCase();
+        const lowercasedEmailAddress = ($emailAddress as string).toLowerCase();
         const existingUser = await userStore.getUser(lowercasedEmailAddress);
         if (!existingUser) {
             feedback = 'User not found with this email. Did you mean to create a new user?';
@@ -82,24 +128,25 @@
         return existingUser;
     }
 
-    const onKeyPress = (e: KeyboardEvent) => e.key === 'Enter' && login();
+    const onKeyPress = async (e: KeyboardEvent) => e.key === 'Enter' && await login();
+    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
     const createUser = () => createUserModalOpen = true;
-    const closeUserCreation = () => (<boolean>($creatingUser)) || (createUserModalOpen = false);
+    const closeUserCreation = () => $creatingUser as boolean || (createUserModalOpen = false);
 </script>
 
 <fieldset>
     <legend>&nbsp;Existing user&nbsp;</legend>
     <label for=email>Email:</label>
-    <input type=email id=email bind:value={ $emailAddress } on:keypress={ onKeyPress }
+    <input type=email id=email bind:value={ $emailAddress } on:keypress={ safeOnKeyPress }
            class:invalid={ emailAddressInvalid } disabled={ createUserModalOpen || loggingIn }
            bind:this={ emailInput } />
     <br />
     <label for=password>Password:</label>
-    <input type=password id=password bind:value={ password } on:keypress={ onKeyPress }
+    <input type=password id=password bind:value={ password } on:keypress={ safeOnKeyPress }
            class:invalid={ passwordInvalid } disabled={ createUserModalOpen || loggingIn } />
     <br />
     <br />
-    <input type=button value=Login on:click={ login } disabled={ createUserModalOpen || loggingIn } />
+    <input type=button value=Login disabled={ createUserModalOpen || loggingIn } on:click={ safeLogin } />
     { #if (feedback) }
         <br />
         <span />

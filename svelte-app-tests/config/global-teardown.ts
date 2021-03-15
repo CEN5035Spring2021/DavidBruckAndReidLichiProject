@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import runCommandAsync from '../modules/runCommandAsync';
 import { cosmosDBTempPath } from './global-setup';
 import getElevatePrefix from '../modules/getElevatePrefix';
+import { stopSMTPCoordinator } from '../modules/smtpCoordinator';
+import { stopSMTPServer } from '../../dev-smtp-server/modules/smtpServer';
 
 type Config = { [key: string]: string | undefined }
 const teardownPuppeteer =
@@ -34,6 +36,10 @@ export default async(globalConfig: Config) : Promise<void> => {
                 '| Remove-Item"');
         }
     }
+
+    await stopSMTPServer();
+
+    await stopSMTPCoordinator();
 
     return (await teardownPuppeteer).teardown(globalConfig);
 };

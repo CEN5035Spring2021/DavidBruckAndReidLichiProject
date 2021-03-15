@@ -11,6 +11,7 @@ describe('Echo Azure Function echoes', () => {
             queryString: 'b',
             queryNumber: 2
         };
+        const expectedQuery: { [ key: string ]: string | number } = {};
         const requestSearchParams = Object.entries(requestQuery).reduce((previousValue, currentValue) => {
             const partialSearchParams = previousValue.queryString ? `${previousValue.queryString}&` : '?';
             const currentValueKey = currentValue[0];
@@ -45,7 +46,7 @@ describe('Echo Azure Function echoes', () => {
             };
         }, {
             queryString: '',
-            expectedQuery: {} as { [ key: string ]: string | number }
+            expectedQuery
         });
         const requestUrl = new url.URL(`http://localhost:7071/api/Echo${requestSearchParams.queryString}`);
         const requestBody = {

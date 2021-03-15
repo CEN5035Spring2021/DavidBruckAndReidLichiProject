@@ -6,14 +6,17 @@
     "build:production": "npm run prestart && npm prune --production",
     "watch": "tsc --w",
     "prestart": "npm run build && func extensions install",
-    "start:host": "cross-env CEN5035Spring2021DavidBruckProjectCosmosDBURI=https://localhost:8081 CEN5035Spring2021DavidBruckProjectCosmosDBKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== func start --typescript",
+    "start:host": "cross-env CEN5035Spring2021DavidBruckProjectCosmosDBURI=https://localhost:8081 CEN5035Spring2021DavidBruckProjectCosmosDBKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== CEN5035Spring2021bruck010InsecurePort=5051 CEN5035Spring2021bruck010Email=tester@localhost CEN5035Spring2021bruck010Password=password CEN5035Spring2021bruck010SmtpServer=localhost CEN5035Spring2021Database=CEN5035Spring2021DavidBruckTests CEN5035Spring2021StaticSite=http://localhost:5000/ func start --typescript --cors http://localhost:5000",
     "start": "npm-run-all --parallel start:host watch",
     "lint": "eslint */**/*.{js,json,ts} --fix --max-warnings 0",
     "lint-nofix": "eslint */**/*.{js,json,ts} --max-warnings 0"
   },
   "devDependencies": {
+    "@azure/cosmos": "^3.9.5",
     "@azure/functions": "^1.2.3",
-    "@types/node": "^14.14.31",
+    "@types/node": "^14.14.34",
+    "@types/nodemailer": "^6.4.1",
+    "@types/uuid": "^8.3.0",
     "@typescript-eslint/eslint-plugin": "^4.15.2",
     "@typescript-eslint/parser": "^4.16.1",
     "cross-env": "^7.0.3",
@@ -23,6 +26,8 @@
   },
   "dependencies": {
     "@azure/cosmos": "^3.9.5",
+    "nodemailer": "^6.5.0",
+    "uuid": "^8.3.2",
     "win-ca": "^3.4.5"
   }
 }

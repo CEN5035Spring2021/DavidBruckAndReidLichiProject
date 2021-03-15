@@ -2,8 +2,8 @@ import { writable } from 'svelte/store';
 
 export interface IUser {
     lowercasedEmailAddress: string;
-    encryptedPrivateKey: string;
-    publicKey: CryptoKey;
+    encryptedEncryptionKey: string;
+    encryptedSigningKey: string;
 }
 
 export class UserStore {
@@ -19,7 +19,7 @@ export class UserStore {
             getRequest.onsuccess = next ? () => next(getRequest.result).then(resolve).catch(reject) : resolve;
             getRequest.onerror = () => reject(getRequest.error);
         });
-        return <IUser>getRequest.result;
+        return getRequest.result as IUser;
     }
 
     public async putUser(user: IUser): Promise<void> {
@@ -77,8 +77,10 @@ export class UserStore {
 }
 
 export const emailAddress = writable('');
-export const publicKey = writable<CryptoKey>(null);
-export const privateKey = writable<CryptoKey>(null);
+export const encryptionPrivateKey = writable<CryptoKey>(null);
+export const encryptionPublicKey = writable<CryptoKey>(null);
+export const signingPrivateKey = writable<CryptoKey>(null);
+export const signingPublicKey = writable<CryptoKey>(null);
 export function runUnderUserStore<TState, TResult>(
     callback: (userStore: UserStore, state: TState) => Promise<TResult>,
     state?: TState

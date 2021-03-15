@@ -5,12 +5,12 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "start": "sirv public",
-    "validate": "svelte-check --fail-on-warnings",
+    "validate": "svelte-check --fail-on-warnings --fail-on-hints",
     "lint": "eslint */**/*.{js,json,ts,svelte} --fix --max-warnings 0",
     "lint-nofix": "eslint */**/*.{js,json,ts,svelte} --max-warnings 0"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^17.0.0",
+    "@rollup/plugin-commonjs": "^17.1.0",
     "@rollup/plugin-node-resolve": "^11.0.0",
     "@rollup/plugin-typescript": "^6.0.0",
     "@tsconfig/svelte": "^1.0.10",

@@ -2,7 +2,7 @@ import 'expect-puppeteer';
 
 describe('Created user is logged-in', () => {
     beforeAll(async() => {
-        await page.goto('http://127.0.0.1:5000');
+        await page.goto('http://localhost:5000');
         const createNewUser = await page.$('button');
 
         await createNewUser?.click();
@@ -18,7 +18,7 @@ describe('Created user is logged-in', () => {
     });
 
     it('Created user is logged-in', async () => {
-        const createUserButtonSelector = '.modal > div > input[ type="button" ]';
+        const createUserButtonSelector = '.modal > div > input[ type="button" ][ value="Create user" ]';
         const createUserButton = await page.$(createUserButtonSelector);
 
         await createUserButton?.click();

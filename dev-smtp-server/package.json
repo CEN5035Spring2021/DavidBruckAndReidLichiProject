@@ -1,0 +1,22 @@
+{
+  "name": "dev-smtp-server",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cross-env CEN5035Spring2021bruck010InsecurePort=5051 CEN5035Spring2021bruck010Email=tester@localhost CEN5035Spring2021bruck010Password=password CEN5035Spring2021bruck010SmtpServer=localhost ts-node index.ts",
+    "lint": "eslint */**/*.{js,json,ts} --fix --max-warnings 0",
+    "lint-nofix": "eslint */**/*.{js,json,ts} --max-warnings 0"
+  },
+  "devDependencies": {
+    "@types/smtp-server": "^3.5.6",
+    "@typescript-eslint/eslint-plugin": "^4.17.0",
+    "@typescript-eslint/parser": "^4.17.0",
+    "cross-env": "^7.0.3",
+    "eslint": "^7.22.0"
+  },
+  "dependencies": {
+    "node-wav-player": "^0.2.0",
+    "smtp-server": "^3.8.0",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.3"
+  }
+}

@@ -4,7 +4,4 @@ declare module 'win-ca/api' {
         save: boolean,
         ondata: Buffer[] | ((...items: Buffer[]) => number)
     }): void;
-
-    namespace Api {
-    }
 }
