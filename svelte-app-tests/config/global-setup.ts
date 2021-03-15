@@ -7,8 +7,11 @@ import runCommandAsync from '../modules/runCommandAsync';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import getElevatePrefix from '../modules/getElevatePrefix';
-import seedDatabase from '../modules/seedDatabase';
+import cleanDatabase from '../modules/cleanDatabase';
 import * as chalk from 'chalk';
+import { onEmailReceived } from '../modules/smtpHandlers';
+import { startSMTPServer } from '../../dev-smtp-server/modules/smtpServer';
+import { startSMTPCoordinator } from '../modules/smtpCoordinator';
 
 type Config = { [key: string]: string | undefined }
 const setupPuppeteer =
@@ -130,9 +133,9 @@ export default async(globalConfig: Config) : Promise<void> => {
     try {
         await setupDevServer(servers);
     } catch (e) {
-        const err = <{message: string, stack: string} | null>e;
+        const err = e as {message: string, stack: string} | null;
         console.error(chalk.red(
-            `\n${err && err.message || <string><unknown>err}\n` +
+            `\n${err && err.message || err as unknown as string}\n` +
             ((err && err.stack) ? `${err.stack}\n` : '')));
         throw new Error('Failed to start dev servers prior to starting tests!');
     }
@@ -144,7 +147,11 @@ export default async(globalConfig: Config) : Promise<void> => {
             `powershell -ExecutionPolicy Bypass "${cosmosDBTempPath}\\importcert.ps1"`);
     }
 
-    await seedDatabase();
+    await cleanDatabase();
+
+    await startSMTPServer(onEmailReceived);
+
+    await startSMTPCoordinator();
 
     return (await setupPuppeteer).setup(globalConfig);
 };

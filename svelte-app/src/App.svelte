@@ -1,15 +1,16 @@
-<script context=module>
+<script context=module lang=ts>
     // Must import in reverse dependency order so bundle.js loads regeneratorRuntime before shimIndexedDB
     import './modules/indexedDB';
-    import '../node_modules/indexeddbshim/dist/indexeddbshim';
-    import '../node_modules/regenerator-runtime/runtime';
-    import '../node_modules/core-js-bundle/minified';
+    import 'indexeddbshim/dist/indexeddbshim';
+    import 'regenerator-runtime/runtime';
+    import 'core-js-bundle/minified';
 </script>
 
 <script lang="ts">
-    import Footer from './components/Footer.svelte';
+    import CreateOrganization from './components/CreateOrganization.svelte';
+import Footer from './components/Footer.svelte';
     import Login from './components/Login.svelte';
-    import { privateKey } from './stores/user';
+    import { encryptionPrivateKey } from './stores/user';
 </script>
 
 <h1>
@@ -17,8 +18,9 @@
     <br />
     <small>CEN5035 Spring 2021 David Bruck and Reid Lichi Project</small>
 </h1>
-{ #if ($privateKey) }
+{ #if ($encryptionPrivateKey) }
     <b>Logged in!</b>
+    <CreateOrganization close={ alert.bind(null, 'Close not implemented') } />
 { :else }
     <Login />
 { /if }

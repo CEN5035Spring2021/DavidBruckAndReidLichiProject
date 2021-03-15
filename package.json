@@ -19,8 +19,8 @@
     "silent": true
   },
   "scripts": {
-    "lint": "npm run --prefix ./svelte-app lint && npm run --prefix ./svelte-app-tests lint && npm run --prefix ./azure-functions lint",
-    "lint-nofix": "npm run --prefix ./svelte-app lint-nofix && npm run --prefix ./svelte-app-tests lint-nofix && npm run --prefix ./azure-functions lint-nofix"
+    "lint": "npm run --prefix ./svelte-app lint && npm run --prefix ./svelte-app-tests lint && npm run --prefix ./azure-functions lint && npm run --prefix ./dev-smtp-server lint",
+    "lint-nofix": "npm run --prefix ./svelte-app lint-nofix && npm run --prefix ./svelte-app-tests lint-nofix && npm run --prefix ./azure-functions lint-nofix && npm run --prefix ./dev-smtp-server lint-nofix"
   },
   "repository": {
     "type": "git",

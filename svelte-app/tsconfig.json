@@ -1,6 +1,12 @@
 {
   "extends": "@tsconfig/svelte/tsconfig.json",
 
+  "compilerOptions": {
+    "typeRoots": [
+      "node_modules/@types",
+      "types"
+    ]
+  },
   "include": [
     "src/**/*",
     ".eslintrc.js"
@@ -10,6 +16,5 @@
     "__sapper__/*",
     "public/*"
   ],
-  "moduleResolution": "node",
-  "baseUrl": "."
+  "moduleResolution": "node"
 }

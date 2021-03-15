@@ -1,4 +1,4 @@
-declare interface Window {
+export interface Window extends Window {
     mozIndexedDB?: IDBFactory;
     webkitIndexedDB?: IDBFactory;
     msIndexedDB?: IDBFactory;

@@ -2,7 +2,7 @@ import 'expect-puppeteer';
 
 describe('Login with existing user', () => {
     beforeAll(async() => {
-        await page.goto('http://127.0.0.1:5000');
+        await page.goto('http://localhost:5000');
         const createNewUser = await page.$('button');
 
         await createNewUser?.click();
@@ -10,7 +10,7 @@ describe('Login with existing user', () => {
         const newEmailInput = await page.$('[ id="newEmail" ]');
         const newPasswordInput = await page.$('[ id="newPassword" ]');
         const confirmPasswordInput = await page.$('[ id="confirmPassword" ]');
-        const createUserButtonSelector = '.modal > div > input[ type="button" ]';
+        const createUserButtonSelector = '.modal > div > input[ type="button" ][ value="Create user" ]';
         const createUserButton = await page.$(createUserButtonSelector);
         const emailAddress = 'created-user-is-logged-in@cen.5035';
         const password = 'MyT3stP@ss';

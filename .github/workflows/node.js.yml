@@ -37,13 +37,17 @@ jobs:
       working-directory: ./azure-functions
       run: npm ci && npm i azure-functions-core-tools
 
+    - name: Install dev-smtp-server dependencies
+      working-directory: ./dev-smtp-server
+      run: npm ci
+
     - name: Check svelte-app
       working-directory: ./svelte-app
       run: npm run validate
 
     - name: Lint svelte-app and svelte-app-tests and azure-functions
       working-directory: ./
-      run: npm run lint
+      run: npm run lint-nofix
     
     - name: Test svelte-app and azure-functions
       working-directory: ./svelte-app-tests
