@@ -8,7 +8,7 @@
 
 <script lang="ts">
     import CreateOrganization from './components/CreateOrganization.svelte';
-import Footer from './components/Footer.svelte';
+    import Footer from './components/Footer.svelte';
     import Login from './components/Login.svelte';
     import { encryptionPrivateKey } from './stores/user';
 </script>

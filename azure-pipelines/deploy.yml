@@ -20,12 +20,6 @@ steps:
 - script: choco install azure-functions-core-tools-3 -y --params "'/x64'"
   displayName: choco install azure-functions-core-tools
 
-- script: |
-    npm ci
-    npm run build
-  displayName: npm install and build svelte-app
-  workingDirectory: ./svelte-app
-
 - task: AzureCLI@2
   displayName: Build and publish azure-functions
   inputs:
@@ -37,6 +31,12 @@ steps:
       npm run build:production
       func azure functionapp publish CEN5035Spring2021DavidBruckProject --no-build --javascript --force
     workingDirectory: ./azure-functions
+
+- script: |
+    npm ci
+    npm run build
+  displayName: npm install and build svelte-app
+  workingDirectory: ./svelte-app
 
 - task: AzureFileCopy@4
   displayName: Publish svelte-app
