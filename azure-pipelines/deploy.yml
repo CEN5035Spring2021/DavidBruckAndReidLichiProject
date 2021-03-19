@@ -32,17 +32,14 @@ steps:
       func azure functionapp publish CEN5035Spring2021DavidBruckProject --no-build --javascript --force
     workingDirectory: ./azure-functions
 
-- script: |
-    npm ci
-    npm run build
-  displayName: npm install and build svelte-app
-  workingDirectory: ./svelte-app
-
-- task: AzureFileCopy@4
-  displayName: Publish svelte-app
+- task: AzureCLI@2
+  displayName: Build and publish svelte-app
   inputs:
-    SourcePath: $(Build.SourcesDirectory)/svelte-app/public/*
     azureSubscription: Azure for Students(3e586571-9988-4808-8656-94d9d2bc0639)
-    Destination: AzureBlob
-    storage: cen5035spring2021dbruck
-    ContainerName: $web
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      npm ci
+      npm run build
+      az storage blob sync --account-name cen5035spring2021dbruck -c \$web -s public
+    workingDirectory: ./svelte-app
