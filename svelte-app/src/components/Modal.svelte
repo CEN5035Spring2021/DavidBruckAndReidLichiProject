@@ -1,10 +1,13 @@
 <script lang=ts>
     export let close: () => void;
+    export let unclosable = false;
 </script>
 
 <div class=backdrop on:click={ close } />
 <div class=modal>
-    <span title=Close on:click={ close }>x</span>
+    { #if !unclosable }
+        <span title=Close on:click={ close }>x</span>
+    { /if }
     <slot name=title />
     <slot name=content />
 

@@ -26,7 +26,7 @@
 
     onMount(() => emailInput.focus());
 
-    const createUser = async () => {
+    const createUser = async() => {
         const error = (err: string) => {
             if (!feedback) {
                 feedback = err;
@@ -63,12 +63,12 @@
 
         $creatingUser = true;
         try {
-        // While it seems like it would be more efficient to skip creating the public/private key pair
-        // if we end up finding a duplicate user with the same email address, that would cause error:
-        // !! Failed to execute 'put' on 'IDBObjectStore': The transaction has finished
-        //
-        // This is because on the onsuccess callback from querying the existing user, we must synchronously
-        // start the next put request. Adding asynchronous OpenCrypto calls in between de-synchronizes it.
+            // While it seems like it would be more efficient to skip creating the public/private key pair
+            // if we end up finding a duplicate user with the same email address, that would cause error:
+            // !! Failed to execute 'put' on 'IDBObjectStore': The transaction has finished
+            //
+            // This is because on the onsuccess callback from querying the existing user, we must synchronously
+            // start the next put request. Adding asynchronous OpenCrypto calls in between de-synchronizes it.
 
             const crypt = new OpenCrypto();
             const encryptionKeyPair = await crypt.getRSAKeyPair(
@@ -79,7 +79,7 @@
                     'encrypt',
                     'decrypt'
                 ],
-                true) as { privateKey: CryptoKey, publicKey: CryptoKey };
+                true) as { privateKey: CryptoKey; publicKey: CryptoKey };
             const signingKeyPair = await crypt.getRSAKeyPair(
                 RSA_KEY_LENGTH,
                 'SHA-512',
@@ -88,7 +88,7 @@
                     'sign',
                     'verify'
                 ],
-                true) as { privateKey: CryptoKey, publicKey: CryptoKey };
+                true) as { privateKey: CryptoKey; publicKey: CryptoKey };
 
             const encryptedEncryptionKey = await crypt.encryptPrivateKey(
                 encryptionKeyPair.privateKey,
@@ -125,30 +125,30 @@
             $signingPrivateKey = signingKeyPair.privateKey;
             $signingPublicKey = signingKeyPair.publicKey;
         } catch (e) {
-            error(`Error: ${e && (e as {message: string}).message || e as string}`);
-            throw(e);
+            error(`Error: ${e && (e as { message: string }).message || e as string}`);
+            throw (e);
         } finally {
             $creatingUser = false;
         }
     };
     const safeCreateUser = () => createUser().catch(console.error);
 
-    const onKeyPress = async (e: KeyboardEvent) => e.key === 'Enter' && await createUser();
+    const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createUser();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
 
     async function createUserImplementation(
         userStore: UserStore,
         state: {
-            encryptionKey: CryptoKey,
-            signingKey: CryptoKey,
-            encryptedEncryptionKey: string,
-            encryptedSigningKey: string
+            encryptionKey: CryptoKey;
+            signingKey: CryptoKey;
+            encryptedEncryptionKey: string;
+            encryptedSigningKey: string;
         }) {
 
         const lowercasedEmailAddress = localEmailAddress.toLowerCase();
         const existingUser = await userStore.getUser(
             lowercasedEmailAddress,
-            async (existingUser: IUser) => {
+            async(existingUser: IUser) => {
                 if (existingUser
                     && existingUser.encryptedEncryptionKey
                     && existingUser.encryptedSigningKey) {

@@ -2,8 +2,9 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "func: host start",
 			"type": "func",
-			"command": "host start",
+			"command": "host start --cors http://localhost:5000",
 			"problemMatcher": "$func-node-watch",
 			"isBackground": true,
 			"dependsOn": "npm build",

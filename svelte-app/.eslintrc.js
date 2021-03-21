@@ -18,6 +18,7 @@ module.exports = {
                 ignore: [
                     1
                 ],
+                ignoreArrayIndexes: true,
                 detectObjects: true
             }
         ],

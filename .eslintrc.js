@@ -80,6 +80,61 @@ module.exports = {
                 assertionStyle: 'as',
                 objectLiteralTypeAssertions: 'allow-as-parameter'
             }
+        ],
+        '@typescript-eslint/member-delimiter-style': 'error',
+        'comma-dangle': 'error',
+        '@typescript-eslint/comma-dangle': 'error',
+        'space-before-blocks': 'error',
+        'block-spacing': 'error',
+        '@typescript-eslint/space-infix-ops': 'error',
+        '@typescript-eslint/space-before-function-paren': [
+            'error',
+            'never'
+        ],
+        '@typescript-eslint/func-call-spacing': 'error',
+        '@typescript-eslint/keyword-spacing': 'error',
+        '@typescript-eslint/object-curly-spacing': [
+            'error',
+            'always'
+        ],
+        '@typescript-eslint/no-unused-expressions': [
+            'error',
+            {
+                allowShortCircuit: true,
+                allowTernary: true
+            }
+        ],
+        'no-multiple-empty-lines': [
+            'error',
+            {
+                max: 1,
+                maxBOF: 0,
+                maxEOF: 0
+            }
+        ],
+        'eol-last': 'error',
+        'spaced-comment': [
+            'error',
+            'always',
+            {
+                block: {
+                    markers: [
+                        '!'
+                    ]
+                }
+            }
+        ],
+        'capitalized-comments': [
+            'error',
+            'always',
+            {
+                line: {
+                    ignoreConsecutiveComments: true
+                },
+                block: {
+                    ignoreInlineComments: true
+                }
+            }
         ]
     },
     overrides: [

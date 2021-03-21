@@ -3,9 +3,11 @@
     import Modal from './Modal.svelte';
     import { emailAddress, encryptionPublicKey, signingPublicKey } from '../stores/user';
     import { sign } from '../modules/sign';
+    import { CreateOrganizationResponseType } from '../modules/serverInterfaces';
     import type { CreateOrganizationRequest, CreateOrganizationResponse } from '../modules/serverInterfaces';
     import OpenCrypto from 'opencrypto';
     import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
+    import { organizations } from '../stores/organization';
 
     export let close: () => void;
 
@@ -20,7 +22,7 @@
 
     onMount(() => nameInput.focus());
 
-    const createOrganization = async () => {
+    const createOrganization = async() => {
         const error = (err: string) => {
             if (!feedback) {
                 feedback = err;
@@ -39,14 +41,15 @@
         creatingOrganization = true;
         try {
             const crypt = new OpenCrypto();
-            const createOrganizationRequest = await sign<CreateOrganizationRequest>(
-                {
+            const createOrganizationRequest = await sign<CreateOrganizationRequest>({
+                body: {
                     name,
                     emailAddress: $emailAddress as string,
                     encryptionKey: await crypt.cryptoPublicToPem($encryptionPublicKey as CryptoKey) as string,
                     signingKey: await crypt.cryptoPublicToPem($signingPublicKey as CryptoKey) as string
                 },
-                crypt);
+                crypt
+            });
 
             const response = await new Promise<CreateOrganizationResponse>(
                 (resolve, reject) => {
@@ -65,17 +68,39 @@
                     xhr.open('POST', `${getDefaultFunctionsUrl()}api/createorganization`);
                     xhr.send(JSON.stringify(createOrganizationRequest));
                 });
-            feedback = `Server response: ${response}`;
+            switch (response.type) {
+                case CreateOrganizationResponseType.Created:
+                    feedback = 'Created';
+                    organizations.update(existingOrganizations => [
+                        ...existingOrganizations,
+                        {
+                            name: response.name,
+                            admin: true
+                        }
+                    ]);
+                    console.log(JSON.stringify(response));
+                    break;
+                case CreateOrganizationResponseType.AlreadyExists:
+                    feedback = 'Organization already exists';
+                    break;
+                case CreateOrganizationResponseType.ConfirmationEmailSent:
+                    feedback = 'Confirmation email sent';
+                    break;
+                default:
+                    feedback = `Unexpected server response type ${response.type as string}`;
+                    break;
+            }
+            feedback = `Server response: ${response.type}`;
         } catch (e) {
-            error(`Error: ${e && (e as {message: string}).message || e as string}`);
-            throw(e);
+            error(`Error: ${e && (e as { message: string }).message || e as string}`);
+            throw (e);
         } finally {
             creatingOrganization = false;
         }
     };
     const safeCreateOrganization: () => void = () => createOrganization().catch(console.error);
 
-    const onKeyPress = async (e: KeyboardEvent) => e.key === 'Enter' && await createOrganization();
+    const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createOrganization();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
 </script>
 

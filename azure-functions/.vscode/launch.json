@@ -4,6 +4,7 @@
         {
             "name": "Attach to Node Functions",
             "type": "node",
+            "protocol": "inspector",
             "request": "attach",
             "port": 9229,
             "preLaunchTask": "func: host start"

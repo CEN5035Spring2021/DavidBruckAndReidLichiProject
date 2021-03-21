@@ -2,7 +2,9 @@ import type { KeyObject } from 'crypto';
 import type { Signed } from './serverInterfaces';
 import * as crypto from 'crypto';
 
-export default function validateSignature<T>(body: T & Signed, signingKey: KeyObject) : T {
+export default function validateSignature<T>(
+    body: T & Signed, signingKey: KeyObject) : false | { unsignedBody: T; signature: string } {
+
     if (body == null) {
         throw new Error('Missing request body');
     }
@@ -22,8 +24,11 @@ export default function validateSignature<T>(body: T & Signed, signingKey: KeyOb
                 signature,
                 'base64'))
     {
-        throw new Error('Request body has unverified signature');
+        return false;
     }
 
-    return body;
+    return {
+        unsignedBody: body,
+        signature
+    };
 }

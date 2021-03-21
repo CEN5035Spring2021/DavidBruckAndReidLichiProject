@@ -36,7 +36,7 @@ describe('Creating organization sends email', () => {
         await nameInput?.type('EmailTest');
     });
 
-    it('Creating organization sends email', async () => {
+    it('Creating organization sends email', async() => {
         const createOrganizationButton =
             await page.$('.modal > div > input[ type="button" ][ value="Create organization" ]');
 

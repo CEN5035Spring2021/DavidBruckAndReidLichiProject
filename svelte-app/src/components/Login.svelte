@@ -7,6 +7,15 @@
     } from '../stores/user';
     import type { IUser, UserStore } from '../stores/user';
     import CreateUser from './CreateUser.svelte';
+    import type { OrganizationsRequest, OrganizationsResponse } from '../modules/serverInterfaces';
+    import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
+    import { sign } from '../modules/sign';
+    import { organizations, runUnderOrganizationStore } from '../stores/organization';
+    import type { IOrganization } from '../stores/organization';
+    import onHashChanged from '../modules/onHashChanged';
+
+    const READY = 4; // XHR Ready
+    const OK = 200; // HTTP status
 
     let emailInput: HTMLInputElement;
     let feedback: string;
@@ -19,7 +28,7 @@
 
     onMount(() => emailInput.focus());
 
-    const login = async () => {
+    const login = async() =>{
         const error = (err: string) => {
             if (!feedback) {
                 feedback = err;
@@ -40,18 +49,23 @@
             passwordInvalid = true;
         }
 
+        if (feedback) {
+            return;
+        }
+
         loggingIn = true;
         try {
-            const existingUser = await runUnderUserStore(loginImplementation);
-            if (existingUser
-                && existingUser.lowercasedEmailAddress
-                && existingUser.encryptedEncryptionKey
-                && existingUser.encryptedSigningKey) {
-
+            const lowercasedEmailAddress = ($emailAddress as string).toLowerCase();
+            const existingUser = await runUnderUserStore(loginImplementation, lowercasedEmailAddress);
+            if (existingUser) {
                 const crypt = new OpenCrypto();
 
+                let tempEncryptionPrivateKey: CryptoKey;
+                let tempEncryptionPublicKey: CryptoKey;
+                let tempSigningPrivateKey: CryptoKey;
+                let tempSigningPublicKey: CryptoKey;
                 try {
-                    const tempEncryptionPrivateKey = await crypt.decryptPrivateKey(
+                    tempEncryptionPrivateKey = await crypt.decryptPrivateKey(
                         existingUser.encryptedEncryptionKey,
                         password,
                         {
@@ -63,7 +77,7 @@
                             ],
                             isExtractable: true
                         }) as CryptoKey;
-                    const tempEncryptionPublicKey = await crypt.getPublicKey(
+                    tempEncryptionPublicKey = await crypt.getPublicKey(
                         tempEncryptionPrivateKey,
                         {
                             name: 'RSA-OAEP',
@@ -76,7 +90,7 @@
                             isExtractable: true
                         }) as CryptoKey;
 
-                    const tempSigningPrivateKey = await crypt.decryptPrivateKey(
+                    tempSigningPrivateKey = await crypt.decryptPrivateKey(
                         existingUser.encryptedSigningKey,
                         password,
                         {
@@ -87,7 +101,7 @@
                             ],
                             isExtractable: true
                         }) as CryptoKey;
-                    const tempSigningPublicKey = await crypt.getPublicKey(
+                    tempSigningPublicKey = await crypt.getPublicKey(
                         tempSigningPrivateKey,
                         {
                             name: 'RSA-PSS',
@@ -99,36 +113,94 @@
                             ],
                             isExtractable: true
                         }) as CryptoKey;
-
-                    $encryptionPrivateKey = tempEncryptionPrivateKey;
-                    $encryptionPublicKey = tempEncryptionPublicKey;
-                    $signingPrivateKey = tempSigningPrivateKey;
-                    $signingPublicKey = tempSigningPublicKey;
                 } catch {
                     feedback = 'Unable to decrypt private key with this password';
                     passwordInvalid = true;
                 }
+
+                if (feedback) {
+                    return;
+                }
+
+                // Hash hasn't changed, but this is the earliest we can process it
+                await onHashChanged({
+                    crypt,
+                    tempEncryptionPublicKey,
+                    tempSigningPublicKey,
+                    tempSigningPrivateKey
+                });
+
+                const organizationsRequest = await sign<OrganizationsRequest>({
+                    body: {
+                        emailAddress: $emailAddress as string
+                    },
+                    crypt,
+                    signingKey: tempSigningPrivateKey
+                });
+
+                const organizationsResponse = await new Promise<OrganizationsResponse>(
+                    (resolve, reject) => {
+                        let xhr = new XMLHttpRequest();
+                        xhr.onreadystatechange = function() {
+                            if (this.readyState !== READY) {
+                                return;
+                            }
+
+                            if (this.status === OK) {
+                                resolve(JSON.parse(this.responseText));
+                            } else {
+                                reject(`Server error ${this.status} ${this.responseText}`);
+                            }
+                        };
+                        xhr.open('POST', `${getDefaultFunctionsUrl()}api/getorganizations`);
+                        xhr.send(JSON.stringify(organizationsRequest));
+                    });
+                let tempOrganizations: Array<IOrganization & { lowercasedEmailAddress: string }>;
+                if (organizationsResponse.organizations?.length) {
+                    let tempOrganizations = organizationsResponse.organizations.map(organization => {
+                        if (!organization.name) {
+                            throw new Error('Server returned organization without a name');
+                        }
+                        return {
+                            lowercasedEmailAddress,
+                            name: organization.name,
+                            admin: organization.admin
+                        };
+                    });
+                    await runUnderOrganizationStore(organizationStore => organizationStore.update(tempOrganizations));
+                } else {
+                    tempOrganizations = [];
+                }
+
+                $encryptionPrivateKey = tempEncryptionPrivateKey;
+                $encryptionPublicKey = tempEncryptionPublicKey;
+                $signingPrivateKey = tempSigningPrivateKey;
+                $signingPublicKey = tempSigningPublicKey;
+                $organizations = tempOrganizations;
             }
         } catch (e) {
-            error(`Error: ${e && (e as {message: string}).message || e as string}`);
-            throw(e);
+            error(`Error: ${e && (e as { message: string }).message || e as string}`);
+            throw (e);
         } finally {
             loggingIn = false;
         }
     };
     const safeLogin = () => login().catch(console.error);
 
-    async function loginImplementation(userStore: UserStore): Promise<IUser> {
-        const lowercasedEmailAddress = ($emailAddress as string).toLowerCase();
+    async function loginImplementation(userStore: UserStore, lowercasedEmailAddress: string): Promise<IUser> {
         const existingUser = await userStore.getUser(lowercasedEmailAddress);
-        if (!existingUser) {
+        if (!existingUser
+            || !existingUser.lowercasedEmailAddress
+            || !existingUser.encryptedEncryptionKey
+            || !existingUser.encryptedSigningKey) {
             feedback = 'User not found with this email. Did you mean to create a new user?';
             emailAddressInvalid = true;
+            return null;
         }
         return existingUser;
     }
 
-    const onKeyPress = async (e: KeyboardEvent) => e.key === 'Enter' && await login();
+    const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await login();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
     const createUser = () => createUserModalOpen = true;
     const closeUserCreation = () => $creatingUser as boolean || (createUserModalOpen = false);

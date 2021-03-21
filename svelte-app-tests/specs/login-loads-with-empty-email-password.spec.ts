@@ -4,7 +4,7 @@ describe('Existing user login loads with empty inputs for email and password', (
     beforeAll(async() =>
         page.goto('http://localhost:5000'));
 
-    it('Fieldset fields are all correct', async () => {
+    it('Fieldset fields are all correct', async() => {
         const legend = await page.$('fieldset > legend');
         const emailLabel = await page.$('fieldset > label[ for="email" ]');
         const emailInput = await page.$eval(
