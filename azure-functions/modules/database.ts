@@ -8,9 +8,10 @@ export function getDatabase() : Promise<DatabaseResponse> {
 
     const client = createCosmosClient();
 
-    return client.databases.createIfNotExists({
-        id: DATABASE
-    });
+    return client.databases.createIfNotExists(
+        {
+            id: DATABASE
+        });
 }
 
 export function getOrganizationsContainer(database: DatabaseResponse) : Promise<ContainerResponse> {

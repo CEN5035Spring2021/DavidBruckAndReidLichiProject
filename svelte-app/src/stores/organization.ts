@@ -26,6 +26,8 @@ export class OrganizationStore {
 }
 
 export const organizations = writable<IOrganization[]>([]);
+export const organizationsSession = writable<string>(null);
+export const confirmingOrganization = writable<boolean>(false);
 export function runUnderOrganizationStore<TState, TResult>(
     callback: (organizationStore: OrganizationStore, state: TState) => Promise<TResult>,
     state?: TState

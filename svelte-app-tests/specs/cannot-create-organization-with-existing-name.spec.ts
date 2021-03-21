@@ -31,7 +31,7 @@ describe('Cannot create organization with existing name', () => {
                 timeout: 30000
             });
 
-        const nameInput = await page.$('[ id="newName" ]');
+        let nameInput = await page.$('[ id="newName" ]');
 
         const duplicateTestName = 'DuplicateTest';
         await nameInput?.type(duplicateTestName);
@@ -59,6 +59,39 @@ describe('Cannot create organization with existing name', () => {
 
             await page.goto(link);
         }
+
+        await page.waitForFunction(
+            () => {
+                const modalDivs = document.querySelectorAll('.modal > div');
+                let confirmingOrganizationFound;
+                for (let modalDivIdx = 0, modalDivsLength = modalDivs.length;
+                    modalDivIdx < modalDivsLength;
+                    modalDivIdx++) {
+                    const modalDiv = modalDivs[modalDivIdx];
+                    const modalDivChildren = modalDiv.childNodes;
+                    for (let modalDivChildIdx = 0, modalDivChildrenLength = modalDivChildren.length;
+                        modalDivChildIdx < modalDivChildrenLength;
+                        modalDivChildIdx++) {
+                        const modalDivChild = modalDivChildren[modalDivChildIdx];
+                        if (modalDivChild.nodeType === 3 // TextNode
+                            && modalDivChild.nodeValue
+                            && modalDivChild.nodeValue.trim() === 'Confirming organization...') {
+                            confirmingOrganizationFound = true;
+                            break;
+                        }
+                    }
+                    if (confirmingOrganizationFound) {
+                        break;
+                    }
+                }
+                return !confirmingOrganizationFound;
+            },
+            {
+                timeout: 30000
+            });
+
+        nameInput = await page.$('[ id="newName" ]');
+        await nameInput?.type(duplicateTestName);
     });
 
     it('Cannot create organization with existing name', async() => {

@@ -78,6 +78,7 @@
                             admin: true
                         }
                     ]);
+                    console.log(JSON.stringify(response));
                     break;
                 case CreateOrganizationResponseType.AlreadyExists:
                     feedback = 'Organization already exists';

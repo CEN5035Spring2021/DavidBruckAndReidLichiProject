@@ -1,4 +1,7 @@
 import { writable } from 'svelte/store';
 
-const globalFeedback = writable<string[]>([]);
-export default globalFeedback;
+export const globalFeedback = writable<IGlobalFeedback[]>([]);
+export interface IGlobalFeedback {
+    message: string;
+    isInformational?: boolean;
+}

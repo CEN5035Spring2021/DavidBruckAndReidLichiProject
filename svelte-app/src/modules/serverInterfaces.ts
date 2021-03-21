@@ -4,10 +4,14 @@ export interface CreateOrganizationRequest {
     confirmation?: string;
     encryptionKey: string;
     signingKey: string;
+    usersSession?: string;
+    organizationsSession?: string;
 }
 export interface CreateOrganizationResponse {
     type: CreateOrganizationResponseType;
     name?: string;
+    usersSession?: string;
+    organizationsSession?: string;
 }
 export enum CreateOrganizationResponseType {
     AlreadyExists = 'AlreadyExists',

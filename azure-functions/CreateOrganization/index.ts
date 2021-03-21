@@ -75,8 +75,8 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         && !body.confirmation) {
 
         if (await checkExistingOrganization({
-            name: body.name,
-            organizations
+            organizations,
+            body
         })) {
             return result({
                 context,
@@ -115,9 +115,9 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         }
 
         if (await checkExistingOrganization({
-            name: organizationConfirmation.name,
             organizations,
-            body
+            body,
+            name: organizationConfirmation.name
         })) {
             return result({
                 context,
@@ -146,10 +146,10 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
 };
 
 async function checkExistingOrganization(
-    { name, organizations, body } : {
-        name: string;
+    { organizations, body, name } : {
         organizations: ContainerResponse;
-        body?: CreateOrganizationRequest;
+        body: CreateOrganizationRequest;
+        name?: string;
     }) : Promise<boolean> {
 
     const NAME_NAME = '@name';
@@ -158,23 +158,20 @@ async function checkExistingOrganization(
         parameters: [
             {
                 name: NAME_NAME,
-                value: name
+                value: name || body.name
             }
         ]
     }) as QueryIterator<Organization & Resource>;
 
     let matchedExisting = false;
     do {
-        const {
-            resources
-        } =
-            await organizationsReader.fetchNext();
+        const { resources } = await organizationsReader.fetchNext();
         for (const organization of resources) {
             matchedExisting = true;
-            if (!body || !body.name) {
+            if (!name) {
                 break;
             }
-            if (organization.name !== body.name) {
+            if (organization.name !== name) {
                 throw new Error('Request body name does not match confirmation');
             }
         }
@@ -268,7 +265,7 @@ async function createOrganization(
     };
     await organizationUsers.container.items.create(newOrganizationUser);
 
-    return result({
+    result({
         context,
         response: {
             type: CreateOrganizationResponseType.Created,
@@ -335,7 +332,7 @@ async function createOrganizationConfirmation(
 
     await organizationConfirmations.container.items.create(newOrganizationConfirmation);
 
-    return result({
+    result({
         context,
         response: {
             type: CreateOrganizationResponseType.ConfirmationEmailSent

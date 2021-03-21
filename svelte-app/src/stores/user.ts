@@ -38,6 +38,7 @@ export const encryptionPrivateKey = writable<CryptoKey>(null);
 export const encryptionPublicKey = writable<CryptoKey>(null);
 export const signingPrivateKey = writable<CryptoKey>(null);
 export const signingPublicKey = writable<CryptoKey>(null);
+export const usersSession = writable<string>(null);
 export function runUnderUserStore<TState, TResult>(
     callback: (userStore: UserStore, state: TState) => Promise<TResult>,
     state?: TState
