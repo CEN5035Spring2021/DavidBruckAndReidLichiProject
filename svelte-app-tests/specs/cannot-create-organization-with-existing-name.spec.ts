@@ -2,8 +2,8 @@ import 'expect-puppeteer';
 import { simpleParser } from 'mailparser';
 import { waitForEmail } from '../modules/smtpCoordinator';
 
-describe('Creating organization sends email', () => {
-    const EMAIL_ADDRESS = 'creating-organization-sends-email@cen.5035';
+describe('Cannot create organization with existing name', () => {
+    const EMAIL_ADDRESS = 'cannot-create-organization-with-existing-name@cen.5035';
 
     beforeAll(async() => {
         await page.goto('http://localhost:5000');
@@ -33,10 +33,9 @@ describe('Creating organization sends email', () => {
 
         const nameInput = await page.$('[ id="newName" ]');
 
-        await nameInput?.type('EmailTest');
-    });
+        const duplicateTestName = 'DuplicateTest';
+        await nameInput?.type(duplicateTestName);
 
-    it('Creating organization sends email', async() => {
         const createOrganizationButton =
             await page.$('.modal > div > input[ type="button" ][ value="Create organization" ]');
 
@@ -52,7 +51,26 @@ describe('Creating organization sends email', () => {
         const email = await simpleParser(
             await emailReceived);
 
-        await expect(email.text).toMatch(
-            'Login with your email address in the original browser to finish organization creation:');
+        if (email.text) {
+            const linkHeader = 'Login with your email address in the original browser to finish organization creation:';
+            const link = email.text
+                .substr(email.text.search(linkHeader) + linkHeader.length)
+                .trim();
+
+            await page.goto(link);
+        }
+    });
+
+    it('Cannot create organization with existing name', async() => {
+        const createOrganizationButton =
+            await page.$('.modal > div > input[ type="button" ][ value="Create organization" ]');
+
+        await createOrganizationButton?.click();
+
+        await expect(page).toMatch(
+            'Server response: AlreadyExists',
+            {
+                timeout: 30000
+            });
     });
 });

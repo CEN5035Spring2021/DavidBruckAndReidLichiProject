@@ -7,7 +7,7 @@ describe('New user loads with empty inputs for email and password', () => {
         await createNewUser?.click();
     });
 
-    it('Modal fields are all correct', async () => {
+    it('Modal fields are all correct', async() => {
         const header = await page.$('.modal > h2');
         const emailLabel = await page.$('.modal > div > label[ for="newEmail" ]');
         const emailInput = await page.$eval(

@@ -17,7 +17,7 @@ describe('Created user is logged-in', () => {
         await confirmPasswordInput?.type(password);
     });
 
-    it('Created user is logged-in', async () => {
+    it('Created user is logged-in', async() => {
         const createUserButtonSelector = '.modal > div > input[ type="button" ][ value="Create user" ]';
         const createUserButton = await page.$(createUserButtonSelector);
 

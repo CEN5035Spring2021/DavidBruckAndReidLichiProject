@@ -4,8 +4,8 @@ export default runCommandAsync;
 function runCommandAsync(
     command: string,
     options?: {
-        errorCodeToResponses?: { [ key: number ]: boolean | undefined },
-        verbose?: boolean
+        errorCodeToResponses?: { [ key: number ]: boolean | undefined };
+        verbose?: boolean;
     }) : Promise<boolean> {
 
     return new Promise<boolean>((resolve, reject) => {
@@ -17,7 +17,7 @@ function runCommandAsync(
                 cwd: process.cwd()
             });
 
-        let buffers: Array<{ data: string | Uint8Array, isError: boolean }>;
+        let buffers: Array<{ data: string | Uint8Array; isError: boolean }>;
         if (options?.verbose) {
             spawned.stdout.pipe(process.stdout);
             spawned.stderr.pipe(process.stderr);

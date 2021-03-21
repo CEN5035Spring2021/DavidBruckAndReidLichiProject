@@ -133,7 +133,7 @@ export default async(globalConfig: Config) : Promise<void> => {
     try {
         await setupDevServer(servers);
     } catch (e) {
-        const err = e as {message: string, stack: string} | null;
+        const err = e as { message: string; stack: string } | null;
         console.error(chalk.red(
             `\n${err && err.message || err as unknown as string}\n` +
             ((err && err.stack) ? `${err.stack}\n` : '')));

@@ -1,3 +1,3 @@
 interface Error {
-    code: string
+    code: string;
 }

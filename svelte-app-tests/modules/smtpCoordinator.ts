@@ -50,7 +50,7 @@ export function waitForEmail(emailAddress: string) : Promise<Buffer> {
                 headers: {
                     'Content-Type': 'text/plain',
                     'Transfer-Encoding': 'chunked'
-                },
+                }
             },
             res => {
                 const data: Buffer[] = [];

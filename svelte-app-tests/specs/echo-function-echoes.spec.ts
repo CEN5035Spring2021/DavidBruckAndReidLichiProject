@@ -2,7 +2,7 @@ import * as http from 'http';
 import * as url from 'url';
 
 describe('Echo Azure Function echoes', () => {
-    it('Echo should return request values', async () => {
+    it('Echo should return request values', async() => {
         const requestQuery = {
             'queryMixed[]': [
                 1,
@@ -58,7 +58,7 @@ describe('Echo Azure Function echoes', () => {
             bodyNumber: 4
         };
         const requestBodyString = JSON.stringify(requestBody);
-        const response = await new Promise<{ data: string, statusCode?: number }>((resolve, reject) => {
+        const response = await new Promise<{ data: string; statusCode?: number }>((resolve, reject) => {
             makeRequest();
 
             function makeRequest() {

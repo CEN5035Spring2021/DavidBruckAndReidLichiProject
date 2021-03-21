@@ -4,6 +4,9 @@
     import 'indexeddbshim/dist/indexeddbshim';
     import 'regenerator-runtime/runtime';
     import 'core-js-bundle/minified';
+    import onHashChanged from './modules/onHashChanged';
+
+    window.onhashchange = onHashChanged;
 </script>
 
 <script lang="ts">
@@ -11,6 +14,7 @@
     import Footer from './components/Footer.svelte';
     import Login from './components/Login.svelte';
     import { encryptionPrivateKey } from './stores/user';
+    import GlobalFeedback from './components/GlobalFeedback.svelte';
 </script>
 
 <h1>
@@ -26,6 +30,7 @@
 { /if }
 <br />
 <Footer />
+<GlobalFeedback />
 
 <style>
     h1 {

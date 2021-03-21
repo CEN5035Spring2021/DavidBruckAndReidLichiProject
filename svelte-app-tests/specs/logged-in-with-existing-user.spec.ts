@@ -35,7 +35,7 @@ describe('Login with existing user', () => {
         await passwordInput?.type(password);
     });
 
-    it('Existing user can login', async () => {
+    it('Existing user can login', async() => {
         const loginButtonSelector = 'fieldset > input[ type="button" ]';
         const loginButton = await page.$(loginButtonSelector);
 
