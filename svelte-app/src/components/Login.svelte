@@ -14,9 +14,7 @@
     import type { IOrganization } from '../stores/organization';
     import onHashChanged from '../modules/onHashChanged';
     import { subscribePleaseWait } from '../stores/globalFeedback';
-
-    const READY = 4; // XHR Ready
-    const OK = 200; // HTTP status
+import { api } from '../modules/api';
 
     let emailInput: HTMLInputElement;
     let feedback: string;
@@ -143,23 +141,11 @@
                     signingKey: tempSigningPrivateKey
                 });
 
-                const organizationsResponse = await new Promise<OrganizationsResponse>(
-                    (resolve, reject) => {
-                        let xhr = new XMLHttpRequest();
-                        xhr.onreadystatechange = function() {
-                            if (this.readyState !== READY) {
-                                return;
-                            }
-
-                            if (this.status === OK) {
-                                resolve(JSON.parse(this.responseText));
-                            } else {
-                                reject(`Server error ${this.status} ${this.responseText}`);
-                            }
-                        };
-                        xhr.open(POST, url);
-                        xhr.send(JSON.stringify(organizationsRequest));
-                    });
+                const organizationsResponse = await api<OrganizationsResponse>({
+                    method: POST,
+                    url,
+                    body: organizationsRequest
+                });
                 let tempOrganizations: Array<IOrganization & { lowercasedEmailAddress: string }>;
                 if (organizationsResponse.organizations?.length) {
                     let tempOrganizations = organizationsResponse.organizations.map(organization => {

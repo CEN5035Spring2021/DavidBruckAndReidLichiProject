@@ -1,5 +1,5 @@
 export default function htmlEscapeWithNewLineBreaks(raw: string): string {
-    return raw
+    return raw && raw
         .split('\n')
         .map(line => line
             .replace(/&/g, '&amp;')
