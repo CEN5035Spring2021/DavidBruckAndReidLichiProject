@@ -48,7 +48,7 @@ export function api<T>(
         }
         await new Promise(resolve => setTimeout(
             resolve,
-            Math.pow(EXPONENTIAL_BASE, MAX_RETRIES - retries) * BASE_DELAY_MILLISECONDS));
+            Math.pow(EXPONENTIAL_BASE, MAX_RETRIES - retries + 1) * BASE_DELAY_MILLISECONDS));
         return apiWithRetries(retries - 1);
     };
     return apiWithRetries();

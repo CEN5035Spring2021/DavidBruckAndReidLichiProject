@@ -36,6 +36,6 @@ describe('Created user is logged-in', () => {
                 timeout: 30000
             });
 
-        await expect(page).toMatch('Logged in!');
+        await page.waitForSelector('div.organizations');
     });
 });

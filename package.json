@@ -1,5 +1,5 @@
 {
-  "name": "cen5035spring2021davidbruckandreidlichiproject",
+  "name": "cen5035spring2021davidbruckproject",
   "version": "1.0.0",
   "description": "https://www.pivotaltracker.com/n/projects/2488115",
   "dependencies": {},
@@ -26,12 +26,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CEN5035Spring2021/DavidBruckAndReidLichiProject.git"
+    "url": "git+https://github.com/CEN5035Spring2021/DavidBruckProject.git"
   },
-  "author": "David Bruck dbruck1@fau.edu and Reid Lichi rlichi2013@fau.edu",
+  "author": "David Bruck dbruck1@fau.edu",
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
-    "url": "https://github.com/CEN5035Spring2021/DavidBruckAndReidLichiProject/issues"
+    "url": "https://github.com/CEN5035Spring2021/DavidBruckProject/issues"
   },
-  "homepage": "https://github.com/CEN5035Spring2021/DavidBruckAndReidLichiProject#readme"
+  "homepage": "https://github.com/CEN5035Spring2021/DavidBruckProject#readme"
 }

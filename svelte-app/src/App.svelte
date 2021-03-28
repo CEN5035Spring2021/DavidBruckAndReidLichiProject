@@ -21,6 +21,9 @@
     import { writable } from 'svelte/store';
     import { globalFeedback, subscribePleaseWait, unconditionalMessage } from './stores/globalFeedback';
     import { runUnderSettingsStore } from './stores/settings';
+    import Organizations from './components/Organizations.svelte';
+    import Groups from './components/Groups.svelte';
+    import Conversations from './components/Conversations.svelte';
 
     const checkingBrowser = writable(true);
 
@@ -56,23 +59,59 @@
 <h1>
     Secure Group Messenger
     <br />
-    <small>CEN5035 Spring 2021 David Bruck and Reid Lichi Project</small>
+    <small>CEN5035 Spring 2021 David Bruck Project</small>
 </h1>
 { #if $encryptionPrivateKey && !$confirmingOrganization }
-    <b>Logged in!</b>
+    <Organizations class=organizations />
+    <Groups class=groups />
+    <Conversations class=conversations />
     <CreateOrganization close={ alert.bind(null, 'Close not implemented') } />
 { :else if !$checkingBrowser }
-    <Login />
+    <Login class=login />
 { /if }
-<br />
-<Footer />
+<Footer class=footer />
 <GlobalFeedback />
 
 <style>
+    :global(body) {
+        display: grid;
+        grid-template-columns: 3fr 3fr 5fr;
+        grid-template-rows: 106px 1fr 47px;
+        grid-template-areas: "header        header header       "
+                             "organizations groups conversations"
+                             "footer        footer footer       ";
+    }
     h1 {
+        grid-area: header;
         color: #ff3e00;
         text-transform: uppercase;
         font-size: 2em;
         font-weight: 100;
+        margin: 0;
+        padding-top: 20px;
+        white-space: nowrap;
+    }
+    :global(.login) {
+        grid-row: unset;
+        -ms-grid-row: 2;
+        grid-column: unset;
+        -ms-grid-column: 1;
+        -ms-grid-column-span: 3;
+        grid-area: organizations / organizations / organizations / conversations;
+    }
+    :global(.organizations) {
+        grid-area: organizations;
+    }
+    :global(.groups) {
+        grid-area: groups;
+    }
+    :global(.conversations) {
+        grid-area: conversations;
+    }
+    :global(.footer) {
+        grid-area: footer;
+    }
+    :global(.organizations, .groups, .conversations) {
+        overflow: auto;
     }
 </style>

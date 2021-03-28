@@ -10,7 +10,7 @@
     import { organizations } from '../stores/organization';
     import { writable } from 'svelte/store';
     import { subscribePleaseWait } from '../stores/globalFeedback';
-import { api } from '../modules/api';
+    import { api } from '../modules/api';
 
     export let close: () => void;
 
