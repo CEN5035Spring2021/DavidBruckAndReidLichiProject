@@ -1,38 +1,34 @@
 <script lang=ts>
     import Modal from './Modal.svelte';
     import type { IGlobalFeedback } from '../stores/globalFeedback';
+    import { globalFeedbackLength, unconditionalMessage } from '../stores/globalFeedback';
     import { globalFeedback } from '../stores/globalFeedback';
-    import type { Writable } from 'svelte/store';
-
-    export let unconditionalMessage: IGlobalFeedback | undefined;
-    export let showUnconditionalMessage: Writable<boolean> | undefined;
 
     const close = () => {
-        if (!unconditionalMessage) {
+        if (!$unconditionalMessage) {
             globalFeedback.update(feedback => feedback.slice(1));
         }
     };
 
-    $:globalFeedbackLength = unconditionalMessage && showUnconditionalMessage
-        ? ($showUnconditionalMessage as boolean)
-        : ($globalFeedback as IGlobalFeedback[]).length;
-    $:globalFeedbackFirst = unconditionalMessage
-        || globalFeedbackLength
+    $:globalFeedbackFirst = ($unconditionalMessage as IGlobalFeedback | undefined)
+        || $globalFeedbackLength
             && ($globalFeedback as IGlobalFeedback[])[0];
     $:isInformational = globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).isInformational;
+    $:title = (globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).title)
+        || (isInformational ? 'Please wait' : 'An error occurred:');
     $:message = globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).message;
 </script>
 
-{ #if globalFeedbackLength }
-    <Modal { close } unclosable={ !!unconditionalMessage }>
+{ #if $globalFeedbackLength }
+    <Modal { close } unclosable={ !!$unconditionalMessage }>
         <slot name=title slot=title>
-            <h2>An error occurred:</h2>
+            <h2>{ title }</h2>
         </slot>
 
         <div slot=content>
             <span class:error={ !isInformational } />
             { message }
-            { #if unconditionalMessage }
+            { #if $unconditionalMessage }
                 <br />
                 <br />
             { :else }

@@ -1,20 +1,18 @@
 import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
 import type {
-    Organization, OrganizationConfirmation, OrganizationUser, Signed, User
+    Organization, OrganizationConfirmation, OrganizationUser, User, IUser
 } from '../modules/serverInterfaces';
-import validateSignature from '../modules/validateSignature';
+import { validateSignature, getExistingUser } from '../modules/validateSignature';
 import * as crypto from 'crypto';
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
 import { v4 as uuidV4 } from 'uuid';
 import * as nodemailer from 'nodemailer';
 import {
-    getDatabase, getOrganizationConfirmationsContainer, getOrganizationsContainer, getOrganizationUsersContainer,
-    getUsersContainer
+    getOrganizationConfirmationsContainer, getOrganizationsContainer, getOrganizationUsersContainer
 } from '../modules/database';
 
-interface CreateOrganizationRequest {
+interface CreateOrganizationRequest extends IUser {
     name?: string;
-    emailAddress?: string;
     confirmation?: string;
     encryptionKey?: string;
     signingKey?: string;
@@ -42,11 +40,15 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
     }
 
     const bodyValidated =
-        validateSignature<CreateOrganizationRequest>(req.body, crypto.createPublicKey(body.signingKey));
-    if (!bodyValidated) {
+        validateSignature<CreateOrganizationRequest>({
+            method: req.method,
+            url: req.url,
+            body,
+            signingKey: crypto.createPublicKey(body.signingKey)
+        });
+    if (typeof bodyValidated === 'boolean' || !bodyValidated) {
         throw new Error('Request body has unverified signature');
     }
-    const { signature } = bodyValidated;
     if (!body.name && !body.confirmation) {
         throw new Error('Request body lacks name');
     }
@@ -57,22 +59,24 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         throw new Error('Request body lacks encryptionKey');
     }
 
-    const database = await getDatabase();
+    const {
+        userId,
+        database,
+        users
+    } =
+        await getExistingUser({
+            method: req.method,
+            url: req.url,
+            body: {
+                ...bodyValidated.unsignedBody,
+                signature: bodyValidated.signature,
+                time: bodyValidated.time
+            }
+        });
 
     const organizations = await getOrganizationsContainer(database);
 
-    const {
-        matchedExistingUserId,
-        users
-    } =
-        await checkExistingUser({
-            database,
-            body,
-            signature
-        });
-
-    if (matchedExistingUserId
-        && !body.confirmation) {
+    if (userId && !body.confirmation) {
 
         if (await checkExistingOrganization({
             organizations,
@@ -94,7 +98,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
             organizations,
             users,
             database,
-            matchedExistingUserId
+            userId
         });
     }
 
@@ -134,7 +138,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
             organizations,
             users,
             database,
-            matchedExistingUserId
+            userId
         });
     }
 
@@ -180,68 +184,21 @@ async function checkExistingOrganization(
     return matchedExisting;
 }
 
-async function checkExistingUser(
-    { database, body, signature } : {
-        database: DatabaseResponse;
-        body: CreateOrganizationRequest & Signed;
-        signature: string;
-    }): Promise<{
-        matchedExistingUserId?: string;
-        users: ContainerResponse;
-    }> {
-    const users = await getUsersContainer(database);
-
-    const EMAIL_ADDRESS_NAME = '@emailAddress';
-    const usersReader = users.container.items.query({
-        query: `SELECT * FROM root r WHERE r.emailAddress = ${EMAIL_ADDRESS_NAME}`,
-        parameters: [
-            {
-                name: EMAIL_ADDRESS_NAME,
-                value: body.emailAddress
-            }
-        ]
-    }) as QueryIterator<User & Resource>;
-
-    let matchedExistingUserId: string | undefined;
-    do {
-        const {
-            resources: existingUsers
-        } =
-            await usersReader.fetchNext();
-        if (existingUsers.length) {
-            for (const user of existingUsers) {
-                matchedExistingUserId = user.id;
-
-                // Add back original signature to make sure the existing user identifies the same
-                body.signature = signature;
-                if (!validateSignature(body, crypto.createPublicKey(user.signingKey))) {
-                    throw new Error('Request body has unverified signature');
-                }
-            }
-        }
-    } while (usersReader.hasMoreResults());
-
-    return {
-        matchedExistingUserId,
-        users
-    };
-}
-
 async function createOrganization(
-    { context, body, name, organizations, users, database, matchedExistingUserId }: {
+    { context, body, name, organizations, users, database, userId }: {
         context: Context;
         body: CreateOrganizationRequest;
         name: string;
         organizations: ContainerResponse;
         users: ContainerResponse;
         database: DatabaseResponse;
-        matchedExistingUserId: string | undefined;
+        userId: string | undefined;
     }) : Promise<void> {
 
-    const userId = matchedExistingUserId ? matchedExistingUserId : uuidV4().toLowerCase();
-    if (!matchedExistingUserId) {
+    const ensuredUserId = userId ? userId : uuidV4().toLowerCase();
+    if (!userId) {
         const newUser: User = {
-            id: userId,
+            id: ensuredUserId,
             emailAddress: body.emailAddress,
             encryptionKey: body.encryptionKey,
             signingKey: body.signingKey

@@ -8,13 +8,15 @@
     import OpenCrypto from 'opencrypto';
     import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
     import { organizations } from '../stores/organization';
+    import { writable } from 'svelte/store';
+    import { subscribePleaseWait } from '../stores/globalFeedback';
 
     export let close: () => void;
 
     const READY = 4; // XHR Ready
     const OK = 200; // HTTP status
 
-    let creatingOrganization = false;
+    const creatingOrganization = writable(false);
     let nameInput: HTMLInputElement;
     let feedback: string;
     let name: string;
@@ -38,10 +40,14 @@
             return;
         }
 
-        creatingOrganization = true;
+        $creatingOrganization = true;
         try {
             const crypt = new OpenCrypto();
+            const POST = 'POST';
+            const url = `${getDefaultFunctionsUrl()}api/createorganization`;
             const createOrganizationRequest = await sign<CreateOrganizationRequest>({
+                url,
+                method: POST,
                 body: {
                     name,
                     emailAddress: $emailAddress as string,
@@ -65,7 +71,7 @@
                             reject(`Server error ${this.status} ${this.responseText}`);
                         }
                     };
-                    xhr.open('POST', `${getDefaultFunctionsUrl()}api/createorganization`);
+                    xhr.open(POST, url);
                     xhr.send(JSON.stringify(createOrganizationRequest));
                 });
             switch (response.type) {
@@ -78,7 +84,6 @@
                             admin: true
                         }
                     ]);
-                    console.log(JSON.stringify(response));
                     break;
                 case CreateOrganizationResponseType.AlreadyExists:
                     feedback = 'Organization already exists';
@@ -95,13 +100,15 @@
             error(`Error: ${e && (e as { message: string }).message || e as string}`);
             throw (e);
         } finally {
-            creatingOrganization = false;
+            $creatingOrganization = false;
         }
     };
     const safeCreateOrganization: () => void = () => createOrganization().catch(console.error);
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createOrganization();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
+
+    subscribePleaseWait(creatingOrganization, 'Creating organization...');
 </script>
 
 <Modal { close }>
@@ -109,12 +116,12 @@
     <div slot=content>
         <label for=newName>Name:</label>
         <input id=newName bind:value={ name } on:keypress={ safeOnKeyPress }
-               class:invalid={ nameInvalid } disabled={ creatingOrganization }
+               class:invalid={ nameInvalid } disabled={ $creatingOrganization }
                bind:this={ nameInput } />
         <br />
         <br />
         <input type=button value="Create organization" on:click={ safeCreateOrganization }
-               disabled={ creatingOrganization } />
+               disabled={ $creatingOrganization } />
         { #if (feedback) }
             <br />
             <span />
@@ -149,7 +156,7 @@
     }
 
     .invalid {
-        outline: #f00 auto 1px;
+        outline: #f00 solid 1px;
     }
 
     @media (min-width: 640px) {

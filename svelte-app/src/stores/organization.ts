@@ -1,22 +1,25 @@
 import { writable } from 'svelte/store';
-import { StoreName } from '../modules/getDatabase';
-import { runUnderStore } from '../modules/runUnderDBObjectStore';
+import { StoreName, supportsCompositeKey, runUnderStore, Store } from '../modules/database';
+import { showUnconditionalMessage, unconditionalMessage } from './globalFeedback';
 
 export interface IOrganization {
     name: string;
     admin?: boolean;
 }
 
-export class OrganizationStore {
-    private readonly organizationStore: IDBObjectStore;
-
-    constructor(organizationStore: IDBObjectStore) {
-        this.organizationStore = organizationStore;
-    }
-
+export class OrganizationStore extends Store {
     public async update(organizations: Array<IOrganization & { lowercasedEmailAddress: string }>): Promise<void> {
         for (const organization of organizations) {
-            const putRequest = this.organizationStore.put(organization);
+            const nonCompositeKeyOrganization:
+                Partial<IOrganization & {
+                    lowercasedEmailAddress_name: string;
+                    lowercasedEmailAddress: string;
+                }> = organization;
+            if (!await supportsCompositeKey()) {
+                nonCompositeKeyOrganization.lowercasedEmailAddress_name =
+                    `${organization.lowercasedEmailAddress}_${organization.name}`;
+            }
+            const putRequest = this._store.put(nonCompositeKeyOrganization);
             await new Promise((resolve, reject) => {
                 putRequest.onsuccess = resolve;
                 putRequest.onerror = () => reject(putRequest.error);
@@ -40,3 +43,13 @@ export function runUnderOrganizationStore<TState, TResult>(
         state
     });
 }
+
+confirmingOrganization.subscribe(value => {
+    unconditionalMessage.update(() => value
+        ? {
+            message: 'Confirming organization...',
+            isInformational: true
+        }
+        : undefined);
+    showUnconditionalMessage.subscribe(() => value);
+});

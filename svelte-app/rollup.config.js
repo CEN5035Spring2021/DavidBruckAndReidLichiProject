@@ -6,6 +6,7 @@ import { terser } from 'rollup-plugin-terser';
 import sveltePreprocess from 'svelte-preprocess';
 import typescript from '@rollup/plugin-typescript';
 import css from 'rollup-plugin-css-only';
+import babel from '@rollup/plugin-babel';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -40,7 +41,16 @@ export default {
 	},
 	plugins: [
 		svelte({
-			preprocess: sveltePreprocess({ sourceMap: true }),
+			preprocess: sveltePreprocess({
+				sourceMap: true,
+				postcss: {
+					plugins: [
+						require('autoprefixer')({
+							grid: 'autoplace'
+						})
+					]
+				}
+			}),
 			compilerOptions: {
 				// enable run-time checks when not in production
 				dev: !production
@@ -68,6 +78,25 @@ export default {
 		// In dev mode, call `npm run start` once
 		// the bundle has been generated
 		!production && serve(),
+
+		babel({
+			extensions: [
+				'.js',
+				'.mjs',
+				'.html',
+				'.svelte',
+				'.ts'
+			],
+			babelHelpers: 'runtime',
+			plugins: [
+				[
+					'@babel/plugin-transform-runtime',
+					{
+						useESModules: true
+					}
+				]
+			]
+		}),
 
 		// Watch the `public` directory and refresh the
 		// browser on changes when not in production

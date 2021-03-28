@@ -1,8 +1,15 @@
 import 'expect-puppeteer';
 
 describe('Existing user login loads with empty inputs for email and password', () => {
-    beforeAll(async() =>
-        page.goto('http://localhost:5000'));
+    beforeAll(async() => {
+        await page.goto('http://localhost:5000');
+        await page.waitForSelector(
+            '.modal',
+            {
+                hidden: true,
+                timeout: 30000
+            });
+    });
 
     it('Fieldset fields are all correct', async() => {
         const legend = await page.$('fieldset > legend');

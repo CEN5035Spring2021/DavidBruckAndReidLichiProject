@@ -49,7 +49,11 @@ export default async function onHashChanged(
             confirmingOrganization.set(true);
 
             try {
+                const POST = 'POST';
+                const url = `${getDefaultFunctionsUrl()}api/createorganization`;
                 const createOrganizationRequest = await sign<CreateOrganizationRequest>({
+                    url,
+                    method: POST,
                     body: {
                         confirmation,
                         emailAddress: get(emailAddress),
@@ -76,7 +80,7 @@ export default async function onHashChanged(
                                 reject(`Server error ${this.status} ${this.responseText}`);
                             }
                         };
-                        xhr.open('POST', `${getDefaultFunctionsUrl()}api/createorganization`);
+                        xhr.open(POST, url);
                         xhr.send(JSON.stringify(createOrganizationRequest));
                     });
                 switch (response.type) {
@@ -88,9 +92,15 @@ export default async function onHashChanged(
                                 admin: true
                             }
                         ]);
-                        console.log(JSON.stringify(response));
-                        usersSession.set(response.usersSession);
-                        organizationsSession.set(response.organizationsSession);
+                        globalFeedback.update(feedback =>
+                            [
+                                ...feedback,
+                                {
+                                    message: `Organization confirmed: ${response.name}`,
+                                    isInformational: true,
+                                    title: 'Email address verified'
+                                }
+                            ]);
                         break;
                     case CreateOrganizationResponseType.AlreadyExists:
                         globalFeedback.update(feedback => [

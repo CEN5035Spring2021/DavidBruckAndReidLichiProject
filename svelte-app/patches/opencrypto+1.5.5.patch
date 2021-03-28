@@ -1,0 +1,357 @@
+diff --git a/node_modules/opencrypto/src/OpenCrypto.js b/node_modules/opencrypto/src/OpenCrypto.js
+index 5bd8694..0a3f4fa 100644
+--- a/node_modules/opencrypto/src/OpenCrypto.js
++++ b/node_modules/opencrypto/src/OpenCrypto.js
+@@ -551,10 +551,15 @@ export default class OpenCrypto {
+ 
+         if (options.name === 'RSA-OAEP') {
+           options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['decrypt', 'unwrapKey']
+-        } else if (options.name === 'RSA-PSS') {
+-          options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['sign']
+         } else {
+-          throw new TypeError('Expected input of options.name is not a valid algorithm name')
++          switch (options.name) {
++            case 'RSA-PSS':
++            case 'RSASSA-PKCS1-v1_5':
++              options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['sign'];
++              break;
++            default:
++              throw new TypeError('Expected input of options.name is not a valid algorithm name');
++          }
+         }
+ 
+         if (typeof options.usages !== 'object') {
+@@ -688,10 +693,15 @@ export default class OpenCrypto {
+ 
+         if (options.name === 'RSA-OAEP') {
+           options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['encrypt', 'wrapKey']
+-        } else if (options.name === 'RSA-PSS') {
+-          options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['verify']
+         } else {
+-          throw new TypeError('Expected input of options.name is not a valid algorithm name')
++          switch (options.name) {
++            case 'RSA-PSS':
++            case 'RSASSA-PKCS1-v1_5':
++              options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['verify'];
++              break;
++            default:
++              throw new TypeError('Expected input of options.name is not a valid algorithm name');
++          }
+         }
+ 
+         if (typeof options.usages !== 'object') {
+@@ -838,19 +848,24 @@ export default class OpenCrypto {
+ 
+         keyOptions.hash = {}
+         keyOptions.hash.name = options.hash
+-      } else if (options.name === 'RSA-PSS') {
+-        options.type = (typeof options.type !== 'undefined') ? options.type : 'pkcs8'
+-        options.hash = (typeof options.hash !== 'undefined') ? options.hash : 'SHA-512'
+-        options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['sign']
++      } else {
++        switch (options.name) {
++          case 'RSA-PSS':
++          case 'RSASSA-PKCS1-v1_5':
++            options.type = (typeof options.type !== 'undefined') ? options.type : 'pkcs8'
++            options.hash = (typeof options.hash !== 'undefined') ? options.hash : 'SHA-512'
++            options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['sign']
++  
++            if (typeof options.hash !== 'string') {
++              throw new TypeError('Expected input of options.hash to be a String')
++            }
+   
+-        if (typeof options.hash !== 'string') {
+-          throw new TypeError('Expected input of options.hash to be a String')
++            keyOptions.hash = {}
++            keyOptions.hash.name = options.hash
++            break;
++          default:
++            throw new TypeError('Expected input of options.name is not a valid algorithm name');
+         }
+-
+-        keyOptions.hash = {}
+-        keyOptions.hash.name = options.hash
+-      } else {
+-        throw new TypeError('Expected input of options.name is not a valid algorithm name')
+       }
+ 
+       if (typeof options.type !== 'string') {
+@@ -910,10 +925,15 @@ export default class OpenCrypto {
+ 
+       if (paddingScheme === 'RSA-OAEP') {
+         usages = (typeof usages !== 'undefined') ? usages : ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
+-      } else if (paddingScheme === 'RSA-PSS') {
+-        usages = (typeof usages !== 'undefined') ? usages : ['sign', 'verify']
+       } else {
+-        throw new TypeError('Expected input of paddingScheme is not a valid padding scheme')
++        switch (paddingScheme) {
++          case 'RSA-PSS':
++          case 'RSASSA-PKCS1-v1_5':
++            usages = (typeof usages !== 'undefined') ? usages : ['sign', 'verify'];
++            break;
++          default:
++            throw new TypeError('Expected input of paddingScheme is not a valid padding scheme');
++        }
+       }
+ 
+       if (typeof usages !== 'object') {
+@@ -1126,7 +1146,8 @@ export default class OpenCrypto {
+             keyOptions.hash = {}
+             keyOptions.hash.name = privateKey.algorithm.hash.name
+             break
+-          case 'RSA-PSS' :
++          case 'RSA-PSS':
++          case 'RSASSA-PKCS1-v1_5':
+             delete jwkKey.d
+             delete jwkKey.dp
+             delete jwkKey.dq
+@@ -1231,7 +1252,7 @@ export default class OpenCrypto {
+           name: 'PBKDF2'
+         },
+         false,
+-        ['deriveKey']
++        ['deriveKey', 'deriveBits']
+       ).then(baseKey => {
+         cryptoApi.deriveKey(
+           {
+@@ -1349,22 +1370,27 @@ export default class OpenCrypto {
+ 
+         keyOptions.hash = {}
+         keyOptions.hash.name = options.hash
+-      } else if (options.name === 'RSA-PSS') {
+-        options.hash = (typeof options.hash !== 'undefined') ? options.hash : 'SHA-512'
+-        options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['sign']
++      } else {
++        switch (options.name) {
++          case 'RSA-PSS':
++          case 'RSASSA-PKCS1-v1_5':
++            options.hash = (typeof options.hash !== 'undefined') ? options.hash : 'SHA-512'
++            options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['sign']
++  
++            if (typeof options.hash !== 'string') {
++              throw new TypeError('Expected input of options.hash to be a String')
++            }
+   
+-        if (typeof options.hash !== 'string') {
+-          throw new TypeError('Expected input of options.hash to be a String')
+-        }
++            if (typeof options.usages !== 'object') {
++              throw new TypeError('Expected input of options.usages to be an Array')
++            }
+   
+-        if (typeof options.usages !== 'object') {
+-          throw new TypeError('Expected input of options.usages to be an Array')
++            keyOptions.hash = {}
++            keyOptions.hash.name = options.hash
++            break;
++          default:
++            throw new TypeError('Expected input of encryptedPrivateKey is not a valid encrypted private key');
+         }
+-
+-        keyOptions.hash = {}
+-        keyOptions.hash.name = options.hash
+-      } else {
+-        throw new TypeError('Expected input of encryptedPrivateKey is not a valid encrypted private key')
+       }
+ 
+       const passphraseAb = self.stringToArrayBuffer(passphrase)
+@@ -1376,7 +1402,7 @@ export default class OpenCrypto {
+           name: 'PBKDF2'
+         },
+         false,
+-        ['deriveKey']
++        ['deriveKey', 'deriveBits']
+       ).then(baseKey => {
+         cryptoApi.deriveKey(
+           {
+@@ -1737,19 +1763,24 @@ export default class OpenCrypto {
+ 
+         keyOptions.hash = {}
+         keyOptions.hash.name = options.hash
+-      } else if (options.name === 'RSA-PSS') {
+-        options.type = (typeof options.type !== 'undefined') ? options.type : 'pkcs8'
+-        options.hash = (typeof options.hash !== 'undefined') ? options.hash : 'SHA-512'
+-        options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['sign']
++      } else {
++        switch (paddingScheme) {
++          case 'RSA-PSS':
++          case 'RSASSA-PKCS1-v1_5':
++            options.type = (typeof options.type !== 'undefined') ? options.type : 'pkcs8'
++            options.hash = (typeof options.hash !== 'undefined') ? options.hash : 'SHA-512'
++            options.usages = (typeof options.usages !== 'undefined') ? options.usages : ['sign']
++  
++            if (typeof options.hash !== 'string') {
++              throw new TypeError('Expected input of options.hash to be a String')
++            }
+   
+-        if (typeof options.hash !== 'string') {
+-          throw new TypeError('Expected input of options.hash to be a String')
++            keyOptions.hash = {}
++            keyOptions.hash.name = options.hash
++            break;
++          default:
++            throw new TypeError('Expected input of options.name is not a valid algorithm name');
+         }
+-
+-        keyOptions.hash = {}
+-        keyOptions.hash.name = options.hash
+-      } else {
+-        throw new TypeError('Expected input of options.name is not a valid algorithm name')
+       }
+ 
+       if (typeof options.type !== 'string') {
+@@ -1873,16 +1904,27 @@ export default class OpenCrypto {
+           }).catch(err => {
+             reject(err)
+           })
+-        } else if (privateKey.algorithm.name === 'RSA-PSS') {
+-          options.saltLength = (typeof options.saltLength !== 'undefined') ? options.saltLength : 128
+-  
+-          if (typeof options.saltLength !== 'number') {
+-            throw new TypeError('Expected input of options.saltLength to be a Number')
++        } else {
++          switch (privateKey.algorithm.name) {
++            case 'RSA-PSS':
++              options.saltLength = (typeof options.saltLength !== 'undefined') ? options.saltLength : 128;
++  
++              if (typeof options.saltLength !== 'number') {
++                throw new TypeError('Expected input of options.saltLength to be a Number');
++              }
++              break;
++            case 'RSASSA-PKCS1-v1_5':
++              if (typeof options.saltLength !== 'undefined') {
++                throw new TypeError('Expected input of options.saltLength to be undefined');
++              }
++              break;
++            default:
++              throw new TypeError('Expected input of privateKey is not a valid private key');
+           }
+   
+           cryptoApi.sign(
+             {
+-              name: 'RSA-PSS',
++              name: privateKey.algorithm.name,
+               saltLength: options.saltLength
+             },
+             privateKey,
+@@ -1893,8 +1935,6 @@ export default class OpenCrypto {
+           }).catch(err => {
+             reject(err)
+           })
+-        } else {
+-          throw new TypeError('Expected input of privateKey is not a valid private key')
+         }
+       }).catch(err => {
+         reject(err)
+@@ -1957,11 +1997,22 @@ export default class OpenCrypto {
+           }).catch(err => {
+             reject(err)
+           })
+-        } else if (publicKey.algorithm.name === 'RSA-PSS') {
++        } else {
++          let saltLength;
++          switch (publicKey.algorithm.name) {
++            case 'RSA-PSS':
++              saltLength = 128;
++              break;
++            case 'RSASSA-PKCS1-v1_5':
++              break;
++            default:
++              throw new TypeError('Expected input of publicKey is not a valid public key');
++          }
++
+           cryptoApi.verify(
+             {
+-              name: 'RSA-PSS',
+-              saltLength: 128
++              name: publicKey.algorithm.name,
++              saltLength: saltLength
+             },
+             publicKey,
+             signatureAb,
+@@ -1971,8 +2022,6 @@ export default class OpenCrypto {
+           }).catch(err => {
+             reject(err)
+           })
+-        } else {
+-          throw new TypeError('Expected input of publicKey is not a valid public key')
+         }
+       }).catch(err => {
+         reject(err)
+@@ -2024,16 +2073,27 @@ export default class OpenCrypto {
+         }).catch(err => {
+           reject(err)
+         })
+-      } else if (privateKey.algorithm.name === 'RSA-PSS') {
+-        options.saltLength = (typeof options.saltLength !== 'undefined') ? options.saltLength : 128
++      } else { 
++        switch (privateKey.algorithm.name) {
++          case 'RSA-PSS':
++            options.saltLength = (typeof options.saltLength !== 'undefined') ? options.saltLength : 128;
+ 
+-        if (typeof options.saltLength !== 'number') {
+-          throw new TypeError('Expected input of options.saltLength to be a Number')
++            if (typeof options.saltLength !== 'number') {
++              throw new TypeError('Expected input of options.saltLength to be a Number');
++            }
++            break;
++          case 'RSASSA-PKCS1-v1_5':
++            if (typeof options.saltLength !== 'undefined') {
++              throw new TypeError('Expected input of options.saltLength to be undefined');
++            }
++            break;
++          default:
++            throw new TypeError('Expected input of privateKey is not a valid private key');
+         }
+ 
+         cryptoApi.sign(
+           {
+-            name: 'RSA-PSS',
++            name: privateKey.algorithm.name,
+             saltLength: options.saltLength
+           },
+           privateKey,
+@@ -2044,8 +2104,6 @@ export default class OpenCrypto {
+         }).catch(err => {
+           reject(err)
+         })
+-      } else {
+-        throw new TypeError('Expected input of privateKey is not a valid private key')
+       }
+     })
+   }
+@@ -2101,11 +2159,22 @@ export default class OpenCrypto {
+         }).catch(err => {
+           reject(err)
+         })
+-      } else if (publicKey.algorithm.name === 'RSA-PSS') {
++      } else {
++        let saltLength;
++        switch (publicKey.algorithm.name) {
++          case 'RSA-PSS':
++            saltLength = 128;
++            break;
++          case 'RSASSA-PKCS1-v1_5':
++            break;
++          default:
++            throw new TypeError('Expected input of publicKey is not a valid public key');
++        }
++
+         cryptoApi.verify(
+           {
+-            name: 'RSA-PSS',
+-            saltLength: 128
++            name: publicKey.algorithm.name,
++            saltLength: saltLength
+           },
+           publicKey,
+           signatureAb,
+@@ -2115,8 +2184,6 @@ export default class OpenCrypto {
+         }).catch(err => {
+           reject(err)
+         })
+-      } else {
+-        throw new TypeError('Expected input of publicKey is not a valid public key')
+       }
+     })
+   }

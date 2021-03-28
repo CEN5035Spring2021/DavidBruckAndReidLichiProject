@@ -3,6 +3,13 @@ import 'expect-puppeteer';
 describe('New user loads with empty inputs for email and password', () => {
     beforeAll(async() => {
         await page.goto('http://localhost:5000');
+        await page.waitForSelector(
+            '.modal',
+            {
+                hidden: true,
+                timeout: 30000
+            });
+
         const createNewUser = await page.$('button');
         await createNewUser?.click();
     });

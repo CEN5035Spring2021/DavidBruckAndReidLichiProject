@@ -126,7 +126,7 @@ export default async(globalConfig: Config) : Promise<void> => {
                 : 'npm run dev --prefix ../svelte-app',
             protocol: 'http',
             port: 5000,
-            launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
+            launchTimeout: 60000 + (isCI ? 60000 : 0), // 60 seconds (plus more for GitHub Actions)
             serversStarted
         });
 
