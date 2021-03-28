@@ -14,7 +14,10 @@
     import type { IOrganization } from '../stores/organization';
     import onHashChanged from '../modules/onHashChanged';
     import { subscribePleaseWait } from '../stores/globalFeedback';
-import { api } from '../modules/api';
+    import { api } from '../modules/api';
+
+    let clazz: string;
+    export { clazz as class };
 
     let emailInput: HTMLInputElement;
     let feedback: string;
@@ -199,29 +202,31 @@ import { api } from '../modules/api';
     subscribePleaseWait(loggingIn, 'Logging in...');
 </script>
 
-<fieldset>
-    <legend>&nbsp;Existing user&nbsp;</legend>
-    <label for=email>Email:</label>
-    <input type=email id=email bind:value={ $emailAddress } on:keypress={ safeOnKeyPress }
-           class:invalid={ emailAddressInvalid } disabled={ createUserModalOpen || $loggingIn }
-           bind:this={ emailInput } />
-    <br />
-    <label for=password>Password:</label>
-    <input type=password id=password bind:value={ password } on:keypress={ safeOnKeyPress }
-           class:invalid={ passwordInvalid } disabled={ createUserModalOpen || $loggingIn } />
-    <br />
-    <br />
-    <input type=button value=Login disabled={ createUserModalOpen || $loggingIn } on:click={ safeLogin } />
-    { #if (feedback) }
+<div class={ clazz }>
+    <fieldset>
+        <legend>&nbsp;Existing user&nbsp;</legend>
+        <label for=email>Email:</label>
+        <input type=email id=email bind:value={ $emailAddress } on:keypress={ safeOnKeyPress }
+               class:invalid={ emailAddressInvalid } disabled={ createUserModalOpen || $loggingIn }
+               bind:this={ emailInput } />
         <br />
-        <span />
-        { feedback }
-    { /if }
-</fieldset>
-
-<br />
-<button on:click={ createUser }>Create new user</button>
-<br />
+        <label for=password>Password:</label>
+        <input type=password id=password bind:value={ password } on:keypress={ safeOnKeyPress }
+               class:invalid={ passwordInvalid } disabled={ createUserModalOpen || $loggingIn } />
+        <br />
+        <br />
+        <input type=button value=Login disabled={ createUserModalOpen || $loggingIn } on:click={ safeLogin } />
+        { #if (feedback) }
+            <br />
+            <span />
+            { feedback }
+        { /if }
+    </fieldset>
+    
+    <br />
+    <button on:click={ createUser }>Create new user</button>
+    <br />
+</div>
 
 { #if (createUserModalOpen) }
     <CreateUser close={ closeUserCreation } { creatingUser } />

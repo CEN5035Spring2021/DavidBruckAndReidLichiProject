@@ -60,6 +60,6 @@ describe('Login with existing user', () => {
                 timeout: 30000
             });
 
-        await expect(page).toMatch('Logged in!');
+        await page.waitForSelector('div.organizations');
     });
 });
