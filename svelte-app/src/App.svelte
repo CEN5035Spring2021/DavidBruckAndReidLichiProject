@@ -1,10 +1,12 @@
 <script context=module lang=ts>
-    // Must import in reverse dependency order so bundle.js loads regeneratorRuntime before shimIndexedDB
+    // Must import in reverse dependency order so bundle.js loads regeneratorRuntime before shimIndexedDB;
+    // similar dependency issues exist between asmcrypto.js -> webcrypto-liner -> opencrypto (in onHashChanged)
     import './modules/indexedDB';
     import 'indexeddbshim/dist/indexeddbshim';
-    import 'regenerator-runtime/runtime';
-    import 'core-js-bundle/minified';
     import onHashChanged from './modules/onHashChanged';
+    import 'webcrypto-liner';
+    import './modules/asmcrypto';
+    import 'fastestsmallesttextencoderdecoder';
 
     window.onhashchange = onHashChanged;
 </script>
@@ -16,6 +18,39 @@
     import { encryptionPrivateKey } from './stores/user';
     import GlobalFeedback from './components/GlobalFeedback.svelte';
     import { confirmingOrganization } from './stores/organization';
+    import { writable } from 'svelte/store';
+    import { globalFeedback, subscribePleaseWait, unconditionalMessage } from './stores/globalFeedback';
+    import { runUnderSettingsStore } from './stores/settings';
+
+    const checkingBrowser = writable(true);
+
+    runUnderSettingsStore(store => store.supportsRSASigning())
+        .then(({ value, persisted }) => {
+            // Can only show one unconditional message so have to switch out just the message
+            if (value) {
+                $checkingBrowser = false;
+            } else {
+                $unconditionalMessage = {
+                    message: 'Browser does not support RSA Signing.\n' +
+                        'Secure Group Messenger requires a newer browser.'
+                };
+            }
+
+            if (persisted) {
+                return Promise.resolve();
+            }
+
+            return runUnderSettingsStore(store => store.persistRSASigning(value));
+        }).catch(reason =>
+            globalFeedback.update(feedback => [
+                ...feedback,
+                {
+                    message: 'Error in supportsRSASigning: ' +
+                        (reason && (reason as { message: string }).message || reason as string)
+                }
+            ]));
+
+    subscribePleaseWait(checkingBrowser, 'Checking browser for security features...');
 </script>
 
 <h1>
@@ -26,12 +61,7 @@
 { #if $encryptionPrivateKey && !$confirmingOrganization }
     <b>Logged in!</b>
     <CreateOrganization close={ alert.bind(null, 'Close not implemented') } />
-{ :else if $confirmingOrganization }
-    <GlobalFeedback unconditionalMessage={ { message: 'Confirming organization...', isInformational: true } }
-                    showUnconditionalMessage={ confirmingOrganization }>
-        <h2 slot=title>Please wait</h2>
-    </GlobalFeedback>
-{ :else }
+{ :else if !$checkingBrowser }
     <Login />
 { /if }
 <br />

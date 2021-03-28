@@ -1,5 +1,6 @@
 export interface Signed {
     signature?: string;
+    time?: string;
 }
 export interface Organization {
     id: string;
@@ -23,4 +24,7 @@ export interface OrganizationUser {
     organizationId: string;
     userId: string;
     admin?: boolean;
+}
+export interface IUser {
+    emailAddress?: string;
 }

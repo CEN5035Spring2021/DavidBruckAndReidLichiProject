@@ -13,9 +13,8 @@
     import { organizations, runUnderOrganizationStore } from '../stores/organization';
     import type { IOrganization } from '../stores/organization';
     import onHashChanged from '../modules/onHashChanged';
-
-    const READY = 4; // XHR Ready
-    const OK = 200; // HTTP status
+    import { subscribePleaseWait } from '../stores/globalFeedback';
+import { api } from '../modules/api';
 
     let emailInput: HTMLInputElement;
     let feedback: string;
@@ -24,7 +23,7 @@
     let passwordInvalid: boolean;
     let createUserModalOpen : boolean;
     let creatingUser = writable(false);
-    let loggingIn: boolean;
+    const loggingIn = writable(false);
 
     onMount(() => emailInput.focus());
 
@@ -53,7 +52,7 @@
             return;
         }
 
-        loggingIn = true;
+        $loggingIn = true;
         try {
             const lowercasedEmailAddress = ($emailAddress as string).toLowerCase();
             const existingUser = await runUnderUserStore(loginImplementation, lowercasedEmailAddress);
@@ -94,7 +93,7 @@
                         existingUser.encryptedSigningKey,
                         password,
                         {
-                            name: 'RSA-PSS',
+                            name: 'RSASSA-PKCS1-v1_5',
                             hash: 'SHA-512',
                             usages: [
                                 'sign'
@@ -104,7 +103,7 @@
                     tempSigningPublicKey = await crypt.getPublicKey(
                         tempSigningPrivateKey,
                         {
-                            name: 'RSA-PSS',
+                            name: 'RSASSA-PKCS1-v1_5',
                             hash: {
                                 name: 'SHA-512'
                             },
@@ -130,7 +129,11 @@
                     tempSigningPrivateKey
                 });
 
+                const POST = 'POST';
+                const url = `${getDefaultFunctionsUrl()}api/getorganizations`;
                 const organizationsRequest = await sign<OrganizationsRequest>({
+                    url,
+                    method: POST,
                     body: {
                         emailAddress: $emailAddress as string
                     },
@@ -138,23 +141,11 @@
                     signingKey: tempSigningPrivateKey
                 });
 
-                const organizationsResponse = await new Promise<OrganizationsResponse>(
-                    (resolve, reject) => {
-                        let xhr = new XMLHttpRequest();
-                        xhr.onreadystatechange = function() {
-                            if (this.readyState !== READY) {
-                                return;
-                            }
-
-                            if (this.status === OK) {
-                                resolve(JSON.parse(this.responseText));
-                            } else {
-                                reject(`Server error ${this.status} ${this.responseText}`);
-                            }
-                        };
-                        xhr.open('POST', `${getDefaultFunctionsUrl()}api/getorganizations`);
-                        xhr.send(JSON.stringify(organizationsRequest));
-                    });
+                const organizationsResponse = await api<OrganizationsResponse>({
+                    method: POST,
+                    url,
+                    body: organizationsRequest
+                });
                 let tempOrganizations: Array<IOrganization & { lowercasedEmailAddress: string }>;
                 if (organizationsResponse.organizations?.length) {
                     let tempOrganizations = organizationsResponse.organizations.map(organization => {
@@ -182,7 +173,7 @@
             error(`Error: ${e && (e as { message: string }).message || e as string}`);
             throw (e);
         } finally {
-            loggingIn = false;
+            $loggingIn = false;
         }
     };
     const safeLogin = () => login().catch(console.error);
@@ -202,23 +193,25 @@
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await login();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
-    const createUser = () => createUserModalOpen = true;
+    const createUser = () => !$loggingIn && (createUserModalOpen = true);
     const closeUserCreation = () => $creatingUser as boolean || (createUserModalOpen = false);
+
+    subscribePleaseWait(loggingIn, 'Logging in...');
 </script>
 
 <fieldset>
     <legend>&nbsp;Existing user&nbsp;</legend>
     <label for=email>Email:</label>
     <input type=email id=email bind:value={ $emailAddress } on:keypress={ safeOnKeyPress }
-           class:invalid={ emailAddressInvalid } disabled={ createUserModalOpen || loggingIn }
+           class:invalid={ emailAddressInvalid } disabled={ createUserModalOpen || $loggingIn }
            bind:this={ emailInput } />
     <br />
     <label for=password>Password:</label>
     <input type=password id=password bind:value={ password } on:keypress={ safeOnKeyPress }
-           class:invalid={ passwordInvalid } disabled={ createUserModalOpen || loggingIn } />
+           class:invalid={ passwordInvalid } disabled={ createUserModalOpen || $loggingIn } />
     <br />
     <br />
-    <input type=button value=Login disabled={ createUserModalOpen || loggingIn } on:click={ safeLogin } />
+    <input type=button value=Login disabled={ createUserModalOpen || $loggingIn } on:click={ safeLogin } />
     { #if (feedback) }
         <br />
         <span />
@@ -265,7 +258,7 @@
     }
 
     .invalid {
-        outline: #f00 auto 1px;
+        outline: #f00 solid 1px;
     }
 
     button {

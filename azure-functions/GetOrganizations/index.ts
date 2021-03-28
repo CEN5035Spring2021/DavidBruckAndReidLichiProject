@@ -1,15 +1,9 @@
 import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
-import type { Organization, OrganizationUser, Signed, User } from '../modules/serverInterfaces';
-import validateSignature from '../modules/validateSignature';
-import * as crypto from 'crypto';
+import type { IUser, Organization, OrganizationUser, User } from '../modules/serverInterfaces';
+import { getExistingUser } from '../modules/validateSignature';
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
-import {
-    getDatabase, getOrganizationsContainer, getOrganizationUsersContainer, getUsersContainer
-} from '../modules/database';
+import { getOrganizationsContainer, getOrganizationUsersContainer } from '../modules/database';
 
-export interface OrganizationsRequest {
-    emailAddress: string;
-}
 export interface OrganizationsResponse {
     organizations: OrganizationResponse[];
 }
@@ -20,7 +14,7 @@ export interface OrganizationResponse {
 }
 
 const httpTrigger: AzureFunction = async function(context: Context, req: HttpRequest): Promise<void> {
-    const body = req.body as OrganizationsRequest;
+    const body = req.body as IUser;
     if (body == null) {
         throw new Error('Missing request body');
     }
@@ -29,66 +23,22 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         throw new Error('Request body lacks emailAddress');
     }
 
-    const database = await getDatabase();
-
-    const users = await getUsersContainer(database);
-    const matchedExistingUserId = await getExistingUser({
-        users,
-        body
-    });
-
     return result({
         context,
-        organizations: await getOrganizations({
-            database,
-            users,
-            userId: matchedExistingUserId
-        })
+        organizations: await getOrganizations(
+            await getExistingUser({
+                method: req.method,
+                url: req.url,
+                body
+            }))
     });
 };
-
-async function getExistingUser(
-    { users, body } : {
-        users: ContainerResponse;
-        body: OrganizationsRequest & Signed;
-    }): Promise<string | undefined> {
-
-    const EMAIL_ADDRESS_NAME = '@emailAddress';
-    const usersReader = users.container.items.query({
-        query: `SELECT * FROM root r WHERE r.emailAddress = ${EMAIL_ADDRESS_NAME}`,
-        parameters: [
-            {
-                name: EMAIL_ADDRESS_NAME,
-                value: body.emailAddress
-            }
-        ]
-    }) as QueryIterator<User & Resource>;
-
-    const signature = body.signature;
-    let matchedExistingUserId: string | undefined;
-    do {
-        const { resources } = await usersReader.fetchNext();
-        if (resources.length) {
-            for (const user of resources) {
-                matchedExistingUserId = user.id;
-
-                // Add back original signature to make sure the existing user identifies the same
-                body.signature = signature;
-                if (validateSignature(body, crypto.createPublicKey(user.signingKey))) {
-                    matchedExistingUserId = user.id;
-                }
-            }
-        }
-    } while (usersReader.hasMoreResults());
-
-    return matchedExistingUserId;
-}
 
 async function getOrganizations(
     { database, users, userId }: {
         database: DatabaseResponse;
         users: ContainerResponse;
-        userId: string;
+        userId: string | undefined;
     }) : Promise<OrganizationResponse[]> {
 
     const USER_ID = '@userId';

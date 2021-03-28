@@ -126,7 +126,7 @@ export default async(globalConfig: Config) : Promise<void> => {
                 : 'npm run dev --prefix ../svelte-app',
             protocol: 'http',
             port: 5000,
-            launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
+            launchTimeout: 60000 + (isCI ? 60000 : 0), // 60 seconds (plus more for GitHub Actions)
             serversStarted
         });
 
@@ -142,9 +142,42 @@ export default async(globalConfig: Config) : Promise<void> => {
     serversStarted.started = true;
 
     if (isCI) {
-        await runCommandAsync(
-            getElevatePrefix() +
-            `powershell -ExecutionPolicy Bypass "${cosmosDBTempPath}\\importcert.ps1"`);
+        // Cleanup certificates before installing new ones.
+        // This is more reliable than cleaning up certificates in global-teardown.ts, but we'll still try both
+        for (const certLocation of [ 'My', 'Root' ]) {
+            await runCommandAsync(
+                getElevatePrefix() +
+                `powershell "Get-ChildItem Cert:\\LocalMachine\\${certLocation} ` +
+                "| ?{ $_.FriendlyName -match 'CosmosEmulatorContainerCertificate' } " +
+                '| Remove-Item"');
+        }
+        const importCertificatesWithRetries = async(retries = 10) => {
+            await runCommandAsync(
+                getElevatePrefix() +
+                `powershell -ExecutionPolicy Bypass "${cosmosDBTempPath}\\importcert.ps1"`);
+            let certMissing;
+            for (const certLocation of [ 'My', 'Root' ]) {
+                if (!await runCommandAsync(
+                    getElevatePrefix() +
+                        `powershell "Get-ChildItem Cert:\\LocalMachine\\${certLocation} ` +
+                        "| ?{ $_.FriendlyName -match 'CosmosEmulatorContainerCertificate' } " +
+                        '| measure | foreach { If (`$_.Count -eq 0) { exit 1 } }"',
+                    {
+                        errorCodeToResponses: {
+                            1: false
+                        }
+                    })) {
+                    certMissing = true;
+                    break;
+                }
+            }
+            if (!certMissing) {
+                return;
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await importCertificatesWithRetries(retries - 1);
+        };
+        await importCertificatesWithRetries();
     }
 
     await cleanDatabase();

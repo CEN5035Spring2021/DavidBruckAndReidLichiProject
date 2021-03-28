@@ -1,6 +1,5 @@
 import { writable } from 'svelte/store';
-import { StoreName } from '../modules/getDatabase';
-import { runUnderStore } from '../modules/runUnderDBObjectStore';
+import { StoreName, runUnderStore, Store } from '../modules/database';
 
 export interface IUser {
     lowercasedEmailAddress: string;
@@ -8,15 +7,9 @@ export interface IUser {
     encryptedSigningKey: string;
 }
 
-export class UserStore {
-    private readonly userStore: IDBObjectStore;
-
-    constructor(userStore: IDBObjectStore) {
-        this.userStore = userStore;
-    }
-
+export class UserStore extends Store {
     public async getUser(lowercasedEmailAddress: string, next?: (user: IUser) => Promise<void>): Promise<IUser> {
-        const getRequest = this.userStore.get(lowercasedEmailAddress);
+        const getRequest = this._store.get(lowercasedEmailAddress);
         await new Promise((resolve, reject) => {
             getRequest.onsuccess = next ? () => next(getRequest.result).then(resolve).catch(reject) : resolve;
             getRequest.onerror = () => reject(getRequest.error);
@@ -25,7 +18,7 @@ export class UserStore {
     }
 
     public async putUser(user: IUser): Promise<void> {
-        const putRequest = this.userStore.put(user);
+        const putRequest = this._store.put(user);
         await new Promise((resolve, reject) => {
             putRequest.onsuccess = resolve;
             putRequest.onerror = () => reject(putRequest.error);

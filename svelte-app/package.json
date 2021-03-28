@@ -2,6 +2,7 @@
   "name": "svelte-app",
   "version": "1.0.0",
   "scripts": {
+    "postinstall": "patch-package",
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "start": "sirv public",
@@ -10,13 +11,27 @@
     "lint-nofix": "eslint */**/*.{js,json,ts,svelte} --max-warnings 0"
   },
   "devDependencies": {
+    "@babel/core": "^7.13.10",
+    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
+    "@babel/plugin-transform-arrow-functions": "^7.13.0",
+    "@babel/plugin-transform-for-of": "^7.13.0",
+    "@babel/plugin-transform-runtime": "^7.13.10",
+    "@babel/preset-env": "^7.13.10",
+    "@babel/runtime-corejs3": "^7.13.10",
+    "@rollup/plugin-babel": "^5.3.0",
     "@rollup/plugin-commonjs": "^17.1.0",
     "@rollup/plugin-node-resolve": "^11.0.0",
     "@rollup/plugin-typescript": "^6.0.0",
     "@tsconfig/svelte": "^1.0.10",
     "@typescript-eslint/eslint-plugin": "^4.15.1",
     "@typescript-eslint/parser": "^4.15.1",
+    "acorn": "^8.1.0",
+    "autoprefixer": "^10.2.5",
+    "core-js": "^3.9.1",
     "eslint": "^7.20.0",
+    "patch-package": "^6.4.7",
+    "postcss": "^8.2.8",
+    "postcss-load-config": "^3.0.1",
     "rollup": "^2.3.4",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-livereload": "^2.0.0",
@@ -29,9 +44,13 @@
     "typescript": "^4.1.5"
   },
   "dependencies": {
+    "@babel/runtime": "^7.13.10",
+    "asmcrypto.js": "git+https://github.com/asmcrypto/asmcrypto.js.git",
     "core-js-bundle": "^3.8.3",
+    "fastestsmallesttextencoderdecoder": "^1.0.22",
     "indexeddbshim": "^7.0.0",
-    "opencrypto": "^1.5.5",
-    "sirv-cli": "^1.0.0"
+    "opencrypto": "1.5.5",
+    "sirv-cli": "^1.0.0",
+    "webcrypto-liner": "^1.2.4"
   }
 }

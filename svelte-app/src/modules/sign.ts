@@ -2,25 +2,30 @@ import OpenCrypto from 'opencrypto';
 import { signingPrivateKey } from '../stores/user';
 import { get } from 'svelte/store';
 
-const SALT_LENGTH = 256;
 export interface Signed {
     signature: string;
+    time: string;
 }
 export async function sign<T>(
-    { body, crypt, signingKey } : {
+    { method, url, body, crypt, signingKey } : {
+        method: string;
+        url: string;
         body: T;
         crypt?: OpenCrypto;
         signingKey?: CryptoKey;
     }) : Promise<T & Signed> {
-    delete (body as T & { signature: string })['signature'];
+    const toSign: T & { method: string; url: string; time: string } = {
+        ...body,
+        method,
+        url,
+        time: new Date().toISOString()
+    };
 
     return {
         ...body,
+        time: toSign.time,
         signature: await (crypt || new OpenCrypto()).sign(
             signingKey || get(signingPrivateKey),
-            new TextEncoder().encode(JSON.stringify(body, Object.keys(body).sort())),
-            {
-                saltLength: SALT_LENGTH
-            }) as string
+            new TextEncoder().encode(JSON.stringify(toSign, Object.keys(toSign).sort())), {}) as string
     };
 }

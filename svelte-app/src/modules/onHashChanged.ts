@@ -3,14 +3,12 @@ import { get } from 'svelte/store';
 import { globalFeedback } from '../stores/globalFeedback';
 import { organizations, organizationsSession, confirmingOrganization } from '../stores/organization';
 import { emailAddress, encryptionPublicKey, signingPublicKey, usersSession } from '../stores/user';
+import { api } from './api';
 import getDefaultFunctionsUrl from './getFunctionsUrl';
 import getHashValue from './getHashValue';
 import type { CreateOrganizationRequest, CreateOrganizationResponse } from './serverInterfaces';
 import { CreateOrganizationResponseType } from './serverInterfaces';
 import { sign } from './sign';
-
-const READY = 4; // XHR Ready
-const OK = 200; // HTTP status
 
 export default async function onHashChanged(
     options?: {
@@ -49,7 +47,11 @@ export default async function onHashChanged(
             confirmingOrganization.set(true);
 
             try {
+                const POST = 'POST';
+                const url = `${getDefaultFunctionsUrl()}api/createorganization`;
                 const createOrganizationRequest = await sign<CreateOrganizationRequest>({
+                    url,
+                    method: POST,
                     body: {
                         confirmation,
                         emailAddress: get(emailAddress),
@@ -62,23 +64,11 @@ export default async function onHashChanged(
                     signingKey: tempSigningPrivateKey
                 });
 
-                const response = await new Promise<CreateOrganizationResponse>(
-                    (resolve, reject) => {
-                        const xhr = new XMLHttpRequest();
-                        xhr.onreadystatechange = function() {
-                            if (this.readyState !== READY) {
-                                return;
-                            }
-
-                            if (this.status === OK) {
-                                resolve(JSON.parse(this.responseText));
-                            } else {
-                                reject(`Server error ${this.status} ${this.responseText}`);
-                            }
-                        };
-                        xhr.open('POST', `${getDefaultFunctionsUrl()}api/createorganization`);
-                        xhr.send(JSON.stringify(createOrganizationRequest));
-                    });
+                const response = await api<CreateOrganizationResponse>({
+                    method: POST,
+                    url,
+                    body: createOrganizationRequest
+                });
                 switch (response.type) {
                     case CreateOrganizationResponseType.Created:
                         organizations.update(existingOrganizations => [
@@ -88,9 +78,15 @@ export default async function onHashChanged(
                                 admin: true
                             }
                         ]);
-                        console.log(JSON.stringify(response));
-                        usersSession.set(response.usersSession);
-                        organizationsSession.set(response.organizationsSession);
+                        globalFeedback.update(feedback =>
+                            [
+                                ...feedback,
+                                {
+                                    message: `Organization confirmed: ${response.name}`,
+                                    isInformational: true,
+                                    title: 'Email address verified'
+                                }
+                            ]);
                         break;
                     case CreateOrganizationResponseType.AlreadyExists:
                         globalFeedback.update(feedback => [

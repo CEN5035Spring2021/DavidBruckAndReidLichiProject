@@ -8,13 +8,13 @@
     import OpenCrypto from 'opencrypto';
     import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
     import { organizations } from '../stores/organization';
+    import { writable } from 'svelte/store';
+    import { subscribePleaseWait } from '../stores/globalFeedback';
+import { api } from '../modules/api';
 
     export let close: () => void;
 
-    const READY = 4; // XHR Ready
-    const OK = 200; // HTTP status
-
-    let creatingOrganization = false;
+    const creatingOrganization = writable(false);
     let nameInput: HTMLInputElement;
     let feedback: string;
     let name: string;
@@ -38,10 +38,14 @@
             return;
         }
 
-        creatingOrganization = true;
+        $creatingOrganization = true;
         try {
             const crypt = new OpenCrypto();
+            const POST = 'POST';
+            const url = `${getDefaultFunctionsUrl()}api/createorganization`;
             const createOrganizationRequest = await sign<CreateOrganizationRequest>({
+                url,
+                method: POST,
                 body: {
                     name,
                     emailAddress: $emailAddress as string,
@@ -51,23 +55,11 @@
                 crypt
             });
 
-            const response = await new Promise<CreateOrganizationResponse>(
-                (resolve, reject) => {
-                    let xhr = new XMLHttpRequest();
-                    xhr.onreadystatechange = function() {
-                        if (this.readyState !== READY) {
-                            return;
-                        }
-
-                        if (this.status === OK) {
-                            resolve(JSON.parse(this.responseText));
-                        } else {
-                            reject(`Server error ${this.status} ${this.responseText}`);
-                        }
-                    };
-                    xhr.open('POST', `${getDefaultFunctionsUrl()}api/createorganization`);
-                    xhr.send(JSON.stringify(createOrganizationRequest));
-                });
+            const response = await api<CreateOrganizationResponse>({
+                method: POST,
+                url,
+                body: createOrganizationRequest
+            });
             switch (response.type) {
                 case CreateOrganizationResponseType.Created:
                     feedback = 'Created';
@@ -78,7 +70,6 @@
                             admin: true
                         }
                     ]);
-                    console.log(JSON.stringify(response));
                     break;
                 case CreateOrganizationResponseType.AlreadyExists:
                     feedback = 'Organization already exists';
@@ -95,13 +86,15 @@
             error(`Error: ${e && (e as { message: string }).message || e as string}`);
             throw (e);
         } finally {
-            creatingOrganization = false;
+            $creatingOrganization = false;
         }
     };
     const safeCreateOrganization: () => void = () => createOrganization().catch(console.error);
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createOrganization();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
+
+    subscribePleaseWait(creatingOrganization, 'Creating organization...');
 </script>
 
 <Modal { close }>
@@ -109,12 +102,12 @@
     <div slot=content>
         <label for=newName>Name:</label>
         <input id=newName bind:value={ name } on:keypress={ safeOnKeyPress }
-               class:invalid={ nameInvalid } disabled={ creatingOrganization }
+               class:invalid={ nameInvalid } disabled={ $creatingOrganization }
                bind:this={ nameInput } />
         <br />
         <br />
         <input type=button value="Create organization" on:click={ safeCreateOrganization }
-               disabled={ creatingOrganization } />
+               disabled={ $creatingOrganization } />
         { #if (feedback) }
             <br />
             <span />
@@ -149,7 +142,7 @@
     }
 
     .invalid {
-        outline: #f00 auto 1px;
+        outline: #f00 solid 1px;
     }
 
     @media (min-width: 640px) {

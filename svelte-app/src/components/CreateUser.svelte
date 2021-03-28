@@ -7,6 +7,8 @@
     import Modal from './Modal.svelte';
     import OpenCrypto from 'opencrypto';
     import type { Writable } from 'svelte/store';
+    import htmlEscapeWithNewLineBreaks from '../modules/htmlEscapeWithNewlineBreaks';
+    import { subscribePleaseWait } from '../stores/globalFeedback';
 
     export let close: () => void;
     export let creatingUser: Writable<boolean>;
@@ -41,12 +43,18 @@
             error('Email is required');
             emailAddressInvalid = true;
         }
-    
+        if (!emailAddressMatch(localEmailAddress)) {
+            error(
+                'Email must contain characters to the left and right of a single at (@) sign,\n' +
+                'and no underscrores (_) to the right');
+            emailAddressInvalid = true;
+        }
+
         if (!password) {
             error('Password is required');
             passwordInvalid = true;
         }
-    
+
         if (!confirmPassword) {
             error('Confirm password is required');
             confirmPasswordInvalid = true;
@@ -83,7 +91,7 @@
             const signingKeyPair = await crypt.getRSAKeyPair(
                 RSA_KEY_LENGTH,
                 'SHA-512',
-                'RSA-PSS',
+                'RSASSA-PKCS1-v1_5',
                 [
                     'sign',
                     'verify'
@@ -136,6 +144,20 @@
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createUser();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
 
+    function emailAddressMatch(emailAddress: string) : boolean {
+        // // Doing everything in a single Regexp pattern does not work in Microsoft Edge (no negative look behind)
+        // return /((?<!@)[^@])+@[^_@]+(?!.*(?:_|@))/.test(localEmailAddress);
+
+        // Cross-platform multi-Regexp solution
+        const domainMatch = /@[^_@]+(?!.*(?:_|@))/.exec(emailAddress);
+        if (!domainMatch) {
+            return false;
+        }
+        // Single at (@) sign match
+        return emailAddress.length === domainMatch.index +
+            /[^@]+(?!.*@)/.exec(emailAddress.split('').reverse().join(''))?.index;
+    }
+
     async function createUserImplementation(
         userStore: UserStore,
         state: {
@@ -165,6 +187,10 @@
             && existingUser.encryptedEncryptionKey
             && existingUser.encryptedSigningKey;
     }
+
+    subscribePleaseWait(creatingUser, 'Creating user...');
+
+    $: safeFeedback = htmlEscapeWithNewLineBreaks(feedback);
 </script>
 
 <Modal { close }>
@@ -184,10 +210,10 @@
         <br />
         <br />
         <input type=button value="Create user" disabled={ $creatingUser } on:click={ safeCreateUser } />
-        { #if (feedback) }
+        { #if feedback }
             <br />
             <span />
-            { feedback }
+            { @html safeFeedback }
         { /if }
     </div>
 </Modal>
@@ -218,7 +244,7 @@
     }
 
     .invalid {
-        outline: #f00 auto 1px;
+        outline: #f00 solid 1px;
     }
 
     @media (min-width: 640px) {

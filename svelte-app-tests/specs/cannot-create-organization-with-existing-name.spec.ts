@@ -7,6 +7,13 @@ describe('Cannot create organization with existing name', () => {
 
     beforeAll(async() => {
         await page.goto('http://localhost:5000');
+        await page.waitForSelector(
+            '.modal',
+            {
+                hidden: true,
+                timeout: 30000
+            });
+
         const createNewUser = await page.$('button');
 
         await createNewUser?.click();
@@ -63,7 +70,6 @@ describe('Cannot create organization with existing name', () => {
         await page.waitForFunction(
             () => {
                 const modalDivs = document.querySelectorAll('.modal > div');
-                let confirmingOrganizationFound;
                 for (let modalDivIdx = 0, modalDivsLength = modalDivs.length;
                     modalDivIdx < modalDivsLength;
                     modalDivIdx++) {
@@ -75,20 +81,20 @@ describe('Cannot create organization with existing name', () => {
                         const modalDivChild = modalDivChildren[modalDivChildIdx];
                         if (modalDivChild.nodeType === 3 // TextNode
                             && modalDivChild.nodeValue
-                            && modalDivChild.nodeValue.trim() === 'Confirming organization...') {
-                            confirmingOrganizationFound = true;
-                            break;
+                            && modalDivChild.nodeValue.trim() === 'Organization confirmed: DuplicateTest') {
+                            return true;
                         }
                     }
-                    if (confirmingOrganizationFound) {
-                        break;
-                    }
                 }
-                return !confirmingOrganizationFound;
             },
             {
                 timeout: 30000
             });
+
+        const okButton =
+            await page.$('.modal > div > input[ type="button" ][ value="Ok" ]');
+
+        await okButton?.click();
 
         nameInput = await page.$('[ id="newName" ]');
         await nameInput?.type(duplicateTestName);
