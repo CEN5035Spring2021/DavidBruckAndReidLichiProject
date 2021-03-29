@@ -45,7 +45,7 @@
             error('Email is required');
             emailAddressInvalid = true;
         }
-    
+
         if (!password) {
             error('Password is required');
             passwordInvalid = true;
@@ -138,7 +138,7 @@
                     url,
                     method: POST,
                     body: {
-                        emailAddress: $emailAddress as string
+                        emailAddress: existingUser.emailAddress
                     },
                     crypt,
                     signingKey: tempSigningPrivateKey
@@ -151,14 +151,15 @@
                 });
                 let tempOrganizations: Array<IOrganization & { lowercasedEmailAddress: string }>;
                 if (organizationsResponse.organizations?.length) {
-                    let tempOrganizations = organizationsResponse.organizations.map(organization => {
+                    tempOrganizations = organizationsResponse.organizations.map(organization => {
                         if (!organization.name) {
                             throw new Error('Server returned organization without a name');
                         }
                         return {
                             lowercasedEmailAddress,
                             name: organization.name,
-                            admin: organization.admin
+                            admin: organization.admin,
+                            users: organization.users
                         };
                     });
                     await runUnderOrganizationStore(organizationStore => organizationStore.update(tempOrganizations));
@@ -166,6 +167,7 @@
                     tempOrganizations = [];
                 }
 
+                $emailAddress = existingUser.emailAddress; // In case the email address had different casing
                 $encryptionPrivateKey = tempEncryptionPrivateKey;
                 $encryptionPublicKey = tempEncryptionPublicKey;
                 $signingPrivateKey = tempSigningPrivateKey;
@@ -186,7 +188,8 @@
         if (!existingUser
             || !existingUser.lowercasedEmailAddress
             || !existingUser.encryptedEncryptionKey
-            || !existingUser.encryptedSigningKey) {
+            || !existingUser.encryptedSigningKey
+            || !existingUser.emailAddress) {
             feedback = 'User not found with this email. Did you mean to create a new user?';
             emailAddressInvalid = true;
             return null;
@@ -222,7 +225,7 @@
             { feedback }
         { /if }
     </fieldset>
-    
+
     <br />
     <button on:click={ createUser }>Create new user</button>
     <br />

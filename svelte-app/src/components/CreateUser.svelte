@@ -173,14 +173,16 @@
             async(existingUser: IUser) => {
                 if (existingUser
                     && existingUser.encryptedEncryptionKey
-                    && existingUser.encryptedSigningKey) {
+                    && existingUser.encryptedSigningKey
+                    && existingUser.emailAddress) {
                     return;
                 }
 
                 await userStore.putUser({
                     lowercasedEmailAddress,
                     encryptedEncryptionKey: state.encryptedEncryptionKey,
-                    encryptedSigningKey: state.encryptedSigningKey
+                    encryptedSigningKey: state.encryptedSigningKey,
+                    emailAddress: localEmailAddress
                 });
             });
         return existingUser

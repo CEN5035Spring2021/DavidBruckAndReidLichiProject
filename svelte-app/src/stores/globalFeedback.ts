@@ -1,4 +1,4 @@
-import type { Readable } from 'svelte/store';
+import type { Readable, Writable } from 'svelte/store';
 import { get, readable, writable } from 'svelte/store';
 
 export const globalFeedback = writable<IGlobalFeedback[]>([]);

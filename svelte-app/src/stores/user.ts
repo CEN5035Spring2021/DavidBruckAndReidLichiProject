@@ -5,6 +5,7 @@ export interface IUser {
     lowercasedEmailAddress: string;
     encryptedEncryptionKey: string;
     encryptedSigningKey: string;
+    emailAddress: string;
 }
 
 export class UserStore extends Store {

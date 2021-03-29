@@ -61,6 +61,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
 
     const {
         userId,
+        emailAddress,
         database,
         users
     } =
@@ -98,7 +99,8 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
             organizations,
             users,
             database,
-            userId
+            userId,
+            emailAddress
         });
     }
 
@@ -138,7 +140,8 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
             organizations,
             users,
             database,
-            userId
+            userId,
+            emailAddress: organizationConfirmation.emailAddress
         });
     }
 
@@ -185,7 +188,7 @@ async function checkExistingOrganization(
 }
 
 async function createOrganization(
-    { context, body, name, organizations, users, database, userId }: {
+    { context, body, name, organizations, users, database, userId, emailAddress }: {
         context: Context;
         body: CreateOrganizationRequest;
         name: string;
@@ -193,13 +196,15 @@ async function createOrganization(
         users: ContainerResponse;
         database: DatabaseResponse;
         userId: string | undefined;
+        emailAddress: string | undefined;
     }) : Promise<void> {
 
     const ensuredUserId = userId ? userId : uuidV4().toLowerCase();
     if (!userId) {
         const newUser: User = {
             id: ensuredUserId,
-            emailAddress: body.emailAddress,
+            lowercasedEmailAddress: emailAddress.toLowerCase(),
+            emailAddress,
             encryptionKey: body.encryptionKey,
             signingKey: body.signingKey
         };
@@ -217,7 +222,7 @@ async function createOrganization(
     const newOrganizationUser: OrganizationUser = {
         id: uuidV4().toLowerCase(),
         organizationId: newOrganization.id,
-        userId,
+        userId: ensuredUserId,
         admin: true
     };
     await organizationUsers.container.items.create(newOrganizationUser);

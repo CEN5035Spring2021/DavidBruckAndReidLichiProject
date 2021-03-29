@@ -38,6 +38,11 @@ describe('Creating organization sends email', () => {
                 timeout: 30000
             });
 
+        const createNewOrganization =
+            await page.$('div.organizations > div.items > input[ type="button" ][ value="Create new organization" ]');
+
+        await createNewOrganization?.click();
+
         const nameInput = await page.$('[ id="newName" ]');
 
         await nameInput?.type('EmailTest');
