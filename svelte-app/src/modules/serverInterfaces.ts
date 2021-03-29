@@ -25,7 +25,7 @@ export interface OrganizationsResponse {
     organizations?: Organization[];
 }
 export interface Organization {
-    id?: string;
     name?: string;
     admin?: boolean;
+    users?: string[];
 }

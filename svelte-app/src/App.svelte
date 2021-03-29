@@ -12,7 +12,6 @@
 </script>
 
 <script lang="ts">
-    import CreateOrganization from './components/CreateOrganization.svelte';
     import Footer from './components/Footer.svelte';
     import Login from './components/Login.svelte';
     import { encryptionPrivateKey } from './stores/user';
@@ -65,7 +64,6 @@
     <Organizations class=organizations />
     <Groups class=groups />
     <Conversations class=conversations />
-    <CreateOrganization close={ alert.bind(null, 'Close not implemented') } />
 { :else if !$checkingBrowser }
     <Login class=login />
 { /if }
@@ -83,10 +81,10 @@
     }
     h1 {
         grid-area: header;
-        color: #ff3e00;
+        color: #f5793a;
         text-transform: uppercase;
         font-size: 2em;
-        font-weight: 100;
+        font-weight: 400;
         margin: 0;
         padding-top: 20px;
         white-space: nowrap;

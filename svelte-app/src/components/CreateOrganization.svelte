@@ -7,14 +7,14 @@
     import type { CreateOrganizationRequest, CreateOrganizationResponse } from '../modules/serverInterfaces';
     import OpenCrypto from 'opencrypto';
     import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
-    import { organizations } from '../stores/organization';
-    import { writable } from 'svelte/store';
+    import { organizations, selectedOrganization } from '../stores/organization';
+    import type { Writable } from 'svelte/store';
     import { subscribePleaseWait } from '../stores/globalFeedback';
     import { api } from '../modules/api';
 
     export let close: () => void;
+    export let creatingOrganization: Writable<boolean>;
 
-    const creatingOrganization = writable(false);
     let nameInput: HTMLInputElement;
     let feedback: string;
     let name: string;
@@ -67,9 +67,13 @@
                         ...existingOrganizations,
                         {
                             name: response.name,
+                            users: [
+                                $emailAddress as string
+                            ],
                             admin: true
                         }
                     ]);
+                    $selectedOrganization = response.name;
                     break;
                 case CreateOrganizationResponseType.AlreadyExists:
                     feedback = 'Organization already exists';

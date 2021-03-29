@@ -70,6 +70,13 @@ async function getOrganizations(
         organizations.push(...existingOrganizations.values());
     } while (organizationUsersReader.hasMoreResults());
 
+    // Using Order By in the database queries won't work because we query multiple collections
+    // in batches so it might grab earlier-ordered organizations / users in a subsequent batch
+    organizations.sort((a, b) => a.name === b.name ? 0 : (a.name > b.name ? 1 : -1));
+    for (const organization of organizations) {
+        organization.users?.sort();
+    }
+
     return organizations;
 }
 
@@ -142,7 +149,11 @@ async function populateOrganizationUsers(
 
     const usersToOrganizations = new Map<string, string[]>();
     do {
-        for (const existingOrganizationUser of (await organizationUsersReader.fetchNext()).resources) {
+        const fetchLog = async() => {
+            const next = await organizationUsersReader.fetchNext();
+            return next;
+        };
+        for (const existingOrganizationUser of (await fetchLog()).resources) {
             let existingUsersToOrganization = usersToOrganizations.get(existingOrganizationUser.userId);
             if (!existingUsersToOrganization) {
                 usersToOrganizations.set(existingOrganizationUser.userId, existingUsersToOrganization = []);

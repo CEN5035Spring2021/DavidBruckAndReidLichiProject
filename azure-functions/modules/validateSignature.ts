@@ -69,6 +69,7 @@ export async function getExistingUser<T extends IUser>(
         users?: ContainerResponse;
     }): Promise<{
         userId: string | undefined;
+        emailAddress: string | undefined;
         database: DatabaseResponse;
         users: ContainerResponse;
     }> {
@@ -83,13 +84,13 @@ export async function getExistingUser<T extends IUser>(
     const ensuredDatabase = database || await getDatabase();
     const ensuredUsers = users || await getUsersContainer(ensuredDatabase);
 
-    const EMAIL_ADDRESS_NAME = '@emailAddress';
+    const LOWERCASED_EMAIL_ADDRESS_NAME = '@lowercasedEmailAddress';
     const usersReader = ensuredUsers.container.items.query({
-        query: `SELECT * FROM root r WHERE r.emailAddress = ${EMAIL_ADDRESS_NAME}`,
+        query: `SELECT * FROM root r WHERE r.lowercasedEmailAddress = ${LOWERCASED_EMAIL_ADDRESS_NAME}`,
         parameters: [
             {
-                name: EMAIL_ADDRESS_NAME,
-                value: body.emailAddress
+                name: LOWERCASED_EMAIL_ADDRESS_NAME,
+                value: body.emailAddress.toLowerCase()
             }
         ]
     }) as QueryIterator<User & Resource>;
@@ -97,6 +98,7 @@ export async function getExistingUser<T extends IUser>(
     const signature = body.signature;
     const time = body.time;
     let userId: string | undefined;
+    let emailAddress: string | undefined;
     do {
         const { resources } = await usersReader.fetchNext();
         if (resources.length) {
@@ -111,6 +113,7 @@ export async function getExistingUser<T extends IUser>(
                     signingKey: crypto.createPublicKey(user.signingKey)
                 })) {
                     userId = user.id;
+                    emailAddress = user.emailAddress;
                     break;
                 }
             }
@@ -122,6 +125,7 @@ export async function getExistingUser<T extends IUser>(
 
     return {
         userId,
+        emailAddress,
         database: ensuredDatabase,
         users: ensuredUsers
     };

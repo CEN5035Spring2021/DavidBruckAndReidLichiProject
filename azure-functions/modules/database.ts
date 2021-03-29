@@ -39,12 +39,12 @@ export function getOrganizationConfirmationsContainer(database: DatabaseResponse
 export function getUsersContainer(database: DatabaseResponse) : Promise<ContainerResponse> {
     return database.database.containers.createIfNotExists({
         id: 'Users',
-        partitionKey: '/emailAddress',
+        partitionKey: '/lowercasedEmailAddress',
         uniqueKeyPolicy: {
             uniqueKeys: [
                 {
                     paths: [
-                        '/emailAddress'
+                        '/lowercasedEmailAddress'
                     ]
                 }
             ]

@@ -38,6 +38,11 @@ describe('Cannot create organization with existing name', () => {
                 timeout: 30000
             });
 
+        let createNewOrganization =
+            await page.$('div.organizations > div.items > input[ type="button" ][ value="Create new organization" ]');
+
+        await createNewOrganization?.click();
+
         let nameInput = await page.$('[ id="newName" ]');
 
         const duplicateTestName = 'DuplicateTest';
@@ -95,6 +100,11 @@ describe('Cannot create organization with existing name', () => {
             await page.$('.modal > div > input[ type="button" ][ value="Ok" ]');
 
         await okButton?.click();
+
+        createNewOrganization =
+            await page.$('div.organizations > div.items > input[ type="button" ][ value="Create new organization" ]');
+
+        await createNewOrganization?.click();
 
         nameInput = await page.$('[ id="newName" ]');
         await nameInput?.type(duplicateTestName);

@@ -15,6 +15,7 @@ export interface OrganizationConfirmation {
 }
 export interface User {
     id: string;
+    lowercasedEmailAddress: string;
     emailAddress: string;
     encryptionKey: string;
     signingKey: string;
