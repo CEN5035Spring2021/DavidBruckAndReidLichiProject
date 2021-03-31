@@ -4,14 +4,10 @@ export interface CreateOrganizationRequest {
     confirmation?: string;
     encryptionKey: string;
     signingKey: string;
-    usersSession?: string;
-    organizationsSession?: string;
 }
 export interface CreateOrganizationResponse {
     type: CreateOrganizationResponseType;
     name?: string;
-    usersSession?: string;
-    organizationsSession?: string;
 }
 export enum CreateOrganizationResponseType {
     AlreadyExists = 'AlreadyExists',
@@ -28,4 +24,17 @@ export interface Organization {
     name?: string;
     admin?: boolean;
     users?: string[];
+    groups?: GroupResponse[];
+}
+export interface CreateGroupRequest {
+    emailAddress: string;
+    name: string;
+    organizationName: string;
+}
+export enum CreateGroupResponse {
+    AlreadyExists = 'AlreadyExists',
+    Created = 'Created'
+}
+export interface GroupResponse {
+    name?: string;
 }

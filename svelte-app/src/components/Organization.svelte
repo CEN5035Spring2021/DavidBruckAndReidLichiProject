@@ -1,17 +1,15 @@
 <script lang=ts>
-    import type { IOrganization } from '../stores/organization';
     import { selectedOrganization } from '../stores/organization';
 
-    export let organization: IOrganization;
+    export let organization: string;
 
-    $: organizationSelected = $selectedOrganization === organization.name;
-    let organizationName = organization.name;
+    $: organizationSelected = $selectedOrganization === organization;
 
-    const selectOrganization = () => $selectedOrganization = organization.name;
+    const selectOrganization = () => $selectedOrganization = organization;
 </script>
 
 <li class:selected={ organizationSelected } on:click={ selectOrganization }>
-    { organizationName }
+    { organization }
 </li>
 
 <style>

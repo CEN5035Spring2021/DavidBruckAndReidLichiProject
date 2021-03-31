@@ -2,8 +2,8 @@ import 'expect-puppeteer';
 import { simpleParser } from 'mailparser';
 import { waitForEmail } from '../modules/smtpCoordinator';
 
-describe('Cannot create organization with existing name', () => {
-    const EMAIL_ADDRESS = 'cannot-create-organization-with-existing-name@cen.5035';
+describe('A created group is immediately selected', () => {
+    const EMAIL_ADDRESS = 'created-group-is-immediately-selected@cen.5035';
 
     beforeAll(async() => {
         await page.goto('http://localhost:5000');
@@ -38,15 +38,15 @@ describe('Cannot create organization with existing name', () => {
                 timeout: 30000
             });
 
-        let createNewOrganization =
+        const createNewOrganization =
             await page.$('div.organizations > div.items > input[ type="button" ][ value="Create new organization" ]');
 
         await createNewOrganization?.click();
 
         let nameInput = await page.$('[ id="newName" ]');
 
-        const duplicateTestName = 'DuplicateTest';
-        await nameInput?.type(duplicateTestName);
+        const groupSelectTestName = 'GroupSelectTest';
+        await nameInput?.type(groupSelectTestName);
 
         const createOrganizationButton =
             await page.$('.modal > div > input[ type="button" ][ value="Create organization" ]');
@@ -73,7 +73,7 @@ describe('Cannot create organization with existing name', () => {
         }
 
         await page.waitForFunction(
-            (duplicateTestName: string) => {
+            (groupSelectTestName : string) => {
                 const modalDivs = document.querySelectorAll('.modal > div');
                 for (let modalDivIdx = 0, modalDivsLength = modalDivs.length;
                     modalDivIdx < modalDivsLength;
@@ -86,7 +86,7 @@ describe('Cannot create organization with existing name', () => {
                         const modalDivChild = modalDivChildren[modalDivChildIdx];
                         if (modalDivChild.nodeType === 3 // TextNode
                             && modalDivChild.nodeValue
-                            && modalDivChild.nodeValue.trim() === `Organization confirmed: ${duplicateTestName}`) {
+                            && modalDivChild.nodeValue.trim() === `Organization confirmed: ${groupSelectTestName}`) {
                             return true;
                         }
                     }
@@ -95,32 +95,44 @@ describe('Cannot create organization with existing name', () => {
             {
                 timeout: 30000
             },
-            duplicateTestName);
+            groupSelectTestName);
 
         const okButton =
             await page.$('.modal > div > input[ type="button" ][ value="Ok" ]');
 
         await okButton?.click();
 
-        createNewOrganization =
-            await page.$('div.organizations > div.items > input[ type="button" ][ value="Create new organization" ]');
+        const organization = await page.$('div.organizations > div.items > ul > li');
 
-        await createNewOrganization?.click();
+        await organization?.click();
+
+        const createNewGroup =
+            await page.$('div.groups > div.items > input[ type="button" ][ value="Create new group" ]');
+
+        await createNewGroup?.click();
 
         nameInput = await page.$('[ id="newName" ]');
-        await nameInput?.type(duplicateTestName);
+        await nameInput?.type('Group selected test');
     });
 
-    it('Cannot create organization with existing name', async() => {
-        const createOrganizationButton =
-            await page.$('.modal > div > input[ type="button" ][ value="Create organization" ]');
+    it('A created group is immediately selected', async() => {
+        const createGroupButton =
+            await page.$('.modal > div > input[ type="button" ][ value="Create group" ]');
 
-        await createOrganizationButton?.click();
+        await createGroupButton?.click();
 
         await expect(page).toMatch(
-            'Server response: AlreadyExists',
+            'Server response: Created',
             {
                 timeout: 30000
             });
+
+        const closeNewGroup = await page.$('.modal > span');
+
+        await closeNewGroup?.click();
+
+        const selectedGroup = await page.$('div.groups > div.items > ul > li.selected');
+
+        await expect(selectedGroup).toMatch('Group selected test');
     });
 });

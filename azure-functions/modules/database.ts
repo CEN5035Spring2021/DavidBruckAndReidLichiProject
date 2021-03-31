@@ -68,3 +68,20 @@ export function getOrganizationUsersContainer(database: DatabaseResponse) : Prom
         }
     });
 }
+
+export function getGroupsContainer(database: DatabaseResponse) : Promise<ContainerResponse> {
+    return database.database.containers.createIfNotExists({
+        id: 'Groups',
+        partitionKey: '/organizationId',
+        uniqueKeyPolicy: {
+            uniqueKeys: [
+                {
+                    paths: [
+                        '/organizationId',
+                        '/name'
+                    ]
+                }
+            ]
+        }
+    });
+}
