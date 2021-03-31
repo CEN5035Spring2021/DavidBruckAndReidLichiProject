@@ -29,3 +29,8 @@ export interface OrganizationUser {
 export interface IUser {
     emailAddress?: string;
 }
+export interface Group {
+    id: string;
+    organizationId: string;
+    name: string;
+}

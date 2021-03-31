@@ -1,5 +1,5 @@
 import OpenCrypto from 'opencrypto';
-import { StoreName, runUnderStore, Store } from '../modules/database';
+import { StoreName, runUnderStore, Store, supportsCompositeKey } from '../modules/database';
 
 export interface IUser {
     lowercasedEmailAddress: string;
@@ -9,6 +9,7 @@ export interface IUser {
 
 export class SettingsStore extends Store {
     static readonly SUPPORTS_RSA_SIGNING = 'supportsRSASigning';
+    private static _supportsCompositeKey: boolean | undefined;
 
     public async supportsRSASigning() : Promise<{ value: boolean; persisted: boolean }> {
         try {
@@ -52,7 +53,13 @@ export class SettingsStore extends Store {
         });
     }
 
-    static async supportsRSASigningImpl() : Promise<boolean> {
+    public static async supportsCompositeKey() : Promise<boolean> {
+        return typeof SettingsStore._supportsCompositeKey === 'undefined'
+            ? SettingsStore._supportsCompositeKey = await supportsCompositeKey()
+            : SettingsStore._supportsCompositeKey;
+    }
+
+    private static async supportsRSASigningImpl() : Promise<boolean> {
         try {
             const crypt = new OpenCrypto();
             const RSA_KEY_LENGTH = 4096;

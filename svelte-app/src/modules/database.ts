@@ -2,7 +2,7 @@ const INITIAL_VERSION = 1;
 const ORGANIZATION_VERSION = 2;
 const SETTINGS_VERSION = 3;
 // Need add a higher version on every schema change
-// Also, when new versions are added, change the line for `indexedDB.open` in the code below
+// Also, when new versions are added, change the line for `indexedDB.open` in the code inside `getDatabase()`
 
 export enum StoreName {
     UserStore = 'UserStore',

@@ -40,7 +40,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
     }
 
     const bodyValidated =
-        validateSignature<CreateOrganizationRequest>({
+        validateSignature({
             method: req.method,
             url: req.url,
             body,

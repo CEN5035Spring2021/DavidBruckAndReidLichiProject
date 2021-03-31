@@ -149,20 +149,26 @@
                     url,
                     body: organizationsRequest
                 });
-                let tempOrganizations: Array<IOrganization & { lowercasedEmailAddress: string }>;
+                let tempOrganizations: IOrganization[];
                 if (organizationsResponse.organizations?.length) {
                     tempOrganizations = organizationsResponse.organizations.map(organization => {
                         if (!organization.name) {
                             throw new Error('Server returned organization without a name');
                         }
                         return {
-                            lowercasedEmailAddress,
                             name: organization.name,
                             admin: organization.admin,
-                            users: organization.users
+                            users: organization.users,
+                            groups: organization.groups?.map(
+                                organizationGroup => ({
+                                    name: organizationGroup.name
+                                }))
                         };
                     });
-                    await runUnderOrganizationStore(organizationStore => organizationStore.update(tempOrganizations));
+                    await runUnderOrganizationStore(organizationStore => organizationStore.update({
+                        lowercasedEmailAddress,
+                        organizations: tempOrganizations
+                    }));
                 } else {
                     tempOrganizations = [];
                 }
@@ -172,7 +178,7 @@
                 $encryptionPublicKey = tempEncryptionPublicKey;
                 $signingPrivateKey = tempSigningPrivateKey;
                 $signingPublicKey = tempSigningPublicKey;
-                $organizations = tempOrganizations;
+                $organizations = tempOrganizations.map(organization => organization.name);
             }
         } catch (e) {
             error(`Error: ${e && (e as { message: string }).message || e as string}`);

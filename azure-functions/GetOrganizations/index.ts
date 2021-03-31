@@ -1,8 +1,8 @@
 import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
-import type { IUser, Organization, OrganizationUser, User } from '../modules/serverInterfaces';
+import type { Group, IUser, Organization, OrganizationUser, User } from '../modules/serverInterfaces';
 import { getExistingUser } from '../modules/validateSignature';
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
-import { getOrganizationsContainer, getOrganizationUsersContainer } from '../modules/database';
+import { getGroupsContainer, getOrganizationsContainer, getOrganizationUsersContainer } from '../modules/database';
 
 export interface OrganizationsResponse {
     organizations: OrganizationResponse[];
@@ -11,6 +11,10 @@ export interface OrganizationResponse {
     name?: string;
     admin?: boolean;
     users?: string[];
+    groups?: GroupResponse[];
+}
+export interface GroupResponse {
+    name: string;
 }
 
 const httpTrigger: AzureFunction = async function(context: Context, req: HttpRequest): Promise<void> {
@@ -117,6 +121,11 @@ async function populateOrganization(
         existingOrganizations,
         organizationUsers
     });
+
+    await populateOrganizationGroups({
+        database,
+        existingOrganizations
+    });
 }
 
 async function populateOrganizationUsers(
@@ -149,11 +158,7 @@ async function populateOrganizationUsers(
 
     const usersToOrganizations = new Map<string, string[]>();
     do {
-        const fetchLog = async() => {
-            const next = await organizationUsersReader.fetchNext();
-            return next;
-        };
-        for (const existingOrganizationUser of (await fetchLog()).resources) {
+        for (const existingOrganizationUser of (await organizationUsersReader.fetchNext()).resources) {
             let existingUsersToOrganization = usersToOrganizations.get(existingOrganizationUser.userId);
             if (!existingUsersToOrganization) {
                 usersToOrganizations.set(existingOrganizationUser.userId, existingUsersToOrganization = []);
@@ -205,6 +210,50 @@ async function populateUsers(
             }
         }
     } while (usersReader.hasMoreResults());
+}
+
+async function populateOrganizationGroups(
+    { database, existingOrganizations }: {
+        database: DatabaseResponse;
+        existingOrganizations: Map<string, OrganizationResponse>;
+    }) : Promise<void> {
+
+    const adminOrganizations : Map<string, OrganizationResponse> = new Map(
+        [ ...existingOrganizations.entries() ]
+            .filter(existingOrganization => existingOrganization[1].admin));
+
+    if (!adminOrganizations.size) {
+        return;
+    }
+
+    const groups = await getGroupsContainer(database);
+
+    const groupsReader = groups.container.items.query({
+        query: `SELECT * FROM root r WHERE r.organizationId IN (${
+            [ ...Array(adminOrganizations.size).keys() ]
+                .map(getIdParamName)
+                .join(',')
+        })`,
+        parameters: [ ...adminOrganizations.keys() ].map(
+            ((id, organizationOrdinal) => ({
+                name: getIdParamName(organizationOrdinal),
+                value: id
+            })))
+    }) as QueryIterator<Group & Resource>;
+
+    do {
+        for (const existingGroup of (await groupsReader.fetchNext()).resources) {
+            const existingOrganization = existingOrganizations.get(existingGroup.organizationId);
+            const newGroup: GroupResponse = {
+                name: existingGroup.name
+            };
+            if (existingOrganization.groups) {
+                existingOrganization.groups.push(newGroup);
+            } else {
+                existingOrganization.groups = [ newGroup ];
+            }
+        }
+    } while (groupsReader.hasMoreResults());
 }
 
 function getIdParamName(organizationOrdinal: number) {

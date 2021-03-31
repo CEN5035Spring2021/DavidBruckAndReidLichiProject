@@ -1,19 +1,20 @@
 <script lang=ts>
     import { onMount } from 'svelte';
     import Modal from './Modal.svelte';
-    import { emailAddress, encryptionPublicKey, signingPublicKey } from '../stores/user';
+    import { emailAddress } from '../stores/user';
     import { sign } from '../modules/sign';
-    import { CreateOrganizationResponseType } from '../modules/serverInterfaces';
-    import type { CreateOrganizationRequest, CreateOrganizationResponse } from '../modules/serverInterfaces';
+    import type { CreateGroupRequest } from '../modules/serverInterfaces';
+    import { CreateGroupResponse } from '../modules/serverInterfaces';
     import OpenCrypto from 'opencrypto';
     import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
-    import { runUnderOrganizationStore, selectedOrganization } from '../stores/organization';
+    import { selectedOrganization } from '../stores/organization';
     import type { Writable } from 'svelte/store';
     import { subscribePleaseWait } from '../stores/globalFeedback';
     import { api } from '../modules/api';
+    import { runUnderGroupStore, selectedGroup } from '../stores/group';
 
     export let close: () => void;
-    export let creatingOrganization: Writable<boolean>;
+    export let creatingGroup: Writable<boolean>;
 
     let nameInput: HTMLInputElement;
     let feedback: string;
@@ -22,7 +23,7 @@
 
     onMount(() => nameInput.focus());
 
-    const createOrganization = async() => {
+    const createGroup = async() => {
         const error = (err: string) => {
             if (!feedback) {
                 feedback = err;
@@ -38,77 +39,74 @@
             return;
         }
 
-        $creatingOrganization = true;
+        $creatingGroup = true;
         try {
             const crypt = new OpenCrypto();
             const POST = 'POST';
-            const url = `${getDefaultFunctionsUrl()}api/createorganization`;
-            const createOrganizationRequest = await sign<CreateOrganizationRequest>({
+            const url = `${getDefaultFunctionsUrl()}api/creategroup`;
+            const createGroupRequest = await sign<CreateGroupRequest>({
                 url,
                 method: POST,
                 body: {
                     name,
-                    emailAddress: $emailAddress as string,
-                    encryptionKey: await crypt.cryptoPublicToPem($encryptionPublicKey as CryptoKey) as string,
-                    signingKey: await crypt.cryptoPublicToPem($signingPublicKey as CryptoKey) as string
+                    organizationName: $selectedOrganization as string,
+                    emailAddress: $emailAddress as string
                 },
                 crypt
             });
 
-            const response = await api<CreateOrganizationResponse>({
+            const response = await api<CreateGroupResponse>({
                 method: POST,
                 url,
-                body: createOrganizationRequest
+                body: createGroupRequest
             });
-            switch (response.type) {
-                case CreateOrganizationResponseType.Created:
+            switch (response) {
+                case CreateGroupResponse.Created: {
                     feedback = 'Created';
-                    await runUnderOrganizationStore(organizationStore => organizationStore.append({
-                        name: response.name,
-                        users: [
-                            $emailAddress as string
-                        ],
-                        admin: true
+                    const group = {
+                        name
+                    };
+                    await runUnderGroupStore(groupStore => groupStore.append({
+                        organizationName: $selectedOrganization as string,
+                        group
                     }));
-                    $selectedOrganization = response.name;
+                    $selectedGroup = group;
                     break;
-                case CreateOrganizationResponseType.AlreadyExists:
-                    feedback = 'Organization already exists';
-                    break;
-                case CreateOrganizationResponseType.ConfirmationEmailSent:
-                    feedback = 'Confirmation email sent';
+                }
+                case CreateGroupResponse.AlreadyExists:
+                    feedback = 'Group already exists';
                     break;
                 default:
-                    feedback = `Unexpected server response type ${response.type as string}`;
+                    feedback = `Unexpected server response type ${response as string}`;
                     break;
             }
-            feedback = `Server response: ${response.type}`;
+            feedback = `Server response: ${response}`;
         } catch (e) {
             error(`Error: ${e && (e as { message: string }).message || e as string}`);
             throw (e);
         } finally {
-            $creatingOrganization = false;
+            $creatingGroup = false;
         }
     };
-    const safeCreateOrganization: () => void = () => createOrganization().catch(console.error);
+    const safeCreateGroup: () => void = () => createGroup().catch(console.error);
 
-    const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createOrganization();
+    const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createGroup();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
 
-    subscribePleaseWait(creatingOrganization, 'Creating organization...');
+    subscribePleaseWait(creatingGroup, 'Creating group...');
 </script>
 
 <Modal { close }>
-    <h2 slot=title>New organization</h2>
+    <h2 slot=title>New group</h2>
     <div slot=content>
         <label for=newName>Name:</label>
         <input id=newName bind:value={ name } on:keypress={ safeOnKeyPress }
-               class:invalid={ nameInvalid } disabled={ $creatingOrganization }
+               class:invalid={ nameInvalid } disabled={ $creatingGroup }
                bind:this={ nameInput } />
         <br />
         <br />
-        <input type=button value="Create organization" on:click={ safeCreateOrganization }
-               disabled={ $creatingOrganization } />
+        <input type=button value="Create group" on:click={ safeCreateGroup }
+               disabled={ $creatingGroup } />
         { #if (feedback) }
             <br />
             <span />

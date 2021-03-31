@@ -1,8 +1,8 @@
 import OpenCrypto from 'opencrypto';
 import { get } from 'svelte/store';
 import { globalFeedback } from '../stores/globalFeedback';
-import { organizations, organizationsSession, confirmingOrganization } from '../stores/organization';
-import { emailAddress, encryptionPublicKey, signingPublicKey, usersSession } from '../stores/user';
+import { organizations, confirmingOrganization, runUnderOrganizationStore } from '../stores/organization';
+import { emailAddress, encryptionPublicKey, signingPublicKey } from '../stores/user';
 import { api } from './api';
 import getDefaultFunctionsUrl from './getFunctionsUrl';
 import getHashValue from './getHashValue';
@@ -56,9 +56,7 @@ export default async function onHashChanged(
                         confirmation,
                         emailAddress: get(emailAddress),
                         encryptionKey: await crypt.cryptoPublicToPem(tempEncryptionPublicKey) as string,
-                        signingKey: await crypt.cryptoPublicToPem(tempSigningPublicKey) as string,
-                        usersSession: get(usersSession) || undefined,
-                        organizationsSession: get(organizationsSession) || undefined
+                        signingKey: await crypt.cryptoPublicToPem(tempSigningPublicKey) as string
                     },
                     crypt,
                     signingKey: tempSigningPrivateKey
@@ -71,13 +69,10 @@ export default async function onHashChanged(
                 });
                 switch (response.type) {
                     case CreateOrganizationResponseType.Created:
-                        organizations.update(existingOrganizations => [
-                            ...existingOrganizations,
-                            {
-                                name: response.name,
-                                admin: true
-                            }
-                        ]);
+                        await runUnderOrganizationStore(organizationStore => organizationStore.append({
+                            name: response.name,
+                            admin: true
+                        }));
                         globalFeedback.update(feedback =>
                             [
                                 ...feedback,
