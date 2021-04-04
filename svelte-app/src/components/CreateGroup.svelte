@@ -24,12 +24,6 @@
     onMount(() => nameInput.focus());
 
     const createGroup = async() => {
-        const error = (err: string) => {
-            if (!feedback) {
-                feedback = err;
-            }
-        };
-
         if (name) {
             feedback = '';
             nameInvalid = false;
@@ -80,9 +74,8 @@
                     feedback = `Unexpected server response type ${response as string}`;
                     break;
             }
-            feedback = `Server response: ${response}`;
         } catch (e) {
-            error(`Error: ${e && (e as { message: string }).message || e as string}`);
+            feedback = `Error: ${e && (e as { message: string }).message || e as string}`;
             throw (e);
         } finally {
             $creatingGroup = false;

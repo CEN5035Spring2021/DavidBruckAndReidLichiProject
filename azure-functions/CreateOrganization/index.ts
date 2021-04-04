@@ -2,7 +2,7 @@ import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
 import type {
     Organization, OrganizationConfirmation, OrganizationUser, User, IUser
 } from '../modules/serverInterfaces';
-import { validateSignature, getExistingUser } from '../modules/validateSignature';
+import { validateSignature, getValidatedUser } from '../modules/validateSignature';
 import * as crypto from 'crypto';
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
 import { v4 as uuidV4 } from 'uuid';
@@ -65,7 +65,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         database,
         users
     } =
-        await getExistingUser({
+        await getValidatedUser({
             method: req.method,
             url: req.url,
             body: {
@@ -264,7 +264,7 @@ async function createOrganizationConfirmation(
                     }
                 }
                 : `smtps://${encodeURIComponent(EMAIL_FROM)}:${encodeURIComponent(EMAIL_PASSWORD)}` +
-                    `@${EMAIL_SMTP_SERVER}#organizationConfirmation=${newOrganizationConfirmation.id}`)
+                    `@${EMAIL_SMTP_SERVER}`)
         .sendMail(
             {
                 from: EMAIL_FROM,

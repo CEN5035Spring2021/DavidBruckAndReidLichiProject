@@ -1,9 +1,10 @@
 import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
-import type { Organization, OrganizationUser, IUser, Group } from '../modules/serverInterfaces';
-import { getExistingUser } from '../modules/validateSignature';
-import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
+import type { IUser, Group } from '../modules/serverInterfaces';
+import { getValidatedUser } from '../modules/validateSignature';
+import type { ContainerResponse, QueryIterator, Resource } from '@azure/cosmos';
 import { v4 as uuidV4 } from 'uuid';
-import { getOrganizationsContainer, getOrganizationUsersContainer, getGroupsContainer } from '../modules/database';
+import { getGroupsContainer } from '../modules/database';
+import { getExistingOrganization, getOrganizationAdmin } from '../modules/populateOrganization';
 
 interface CreateGroupRequest extends IUser {
     name?: string;
@@ -24,7 +25,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         userId,
         database
     } =
-        await getExistingUser({
+        await getValidatedUser({
             method: req.method,
             url: req.url,
             body
@@ -74,58 +75,6 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         name: body.name
     });
 };
-
-async function getExistingOrganization(
-    { database, name } : {
-        database: DatabaseResponse;
-        name: string;
-    }) : Promise<Organization & Resource | undefined> {
-
-    const organizations = await getOrganizationsContainer(database);
-    const NAME_NAME = '@name';
-    const organizationsReader = organizations.container.items.query({
-        query: `SELECT * FROM root r WHERE r.name = ${NAME_NAME}`,
-        parameters: [
-            {
-                name: NAME_NAME,
-                value: name
-            }
-        ]
-    }) as QueryIterator<Organization & Resource>;
-
-    do {
-        const { resources } = await organizationsReader.fetchNext();
-        for (const organization of resources) {
-            return organization;
-        }
-    } while (organizationsReader.hasMoreResults());
-}
-
-async function getOrganizationAdmin(
-    { database, organizationId } : {
-        database: DatabaseResponse;
-        organizationId: string;
-    }) : Promise<OrganizationUser & Resource | undefined> {
-
-    const organizationUsers = await getOrganizationUsersContainer(database);
-    const ORGANIZATION_ID_NAME = '@organizationId';
-    const organizationUsersReader = organizationUsers.container.items.query({
-        query: `SELECT * FROM root r WHERE r.organizationId = ${ORGANIZATION_ID_NAME} AND r.admin`,
-        parameters: [
-            {
-                name: ORGANIZATION_ID_NAME,
-                value: organizationId
-            }
-        ]
-    }) as QueryIterator<OrganizationUser & Resource>;
-
-    do {
-        const { resources } = await organizationUsersReader.fetchNext();
-        for (const organizationUser of resources) {
-            return organizationUser;
-        }
-    } while (organizationUsersReader.hasMoreResults());
-}
 
 async function checkExistingGroup(
     { groups, organizationId, name } : {

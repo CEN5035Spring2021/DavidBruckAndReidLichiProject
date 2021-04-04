@@ -34,3 +34,15 @@ export interface Group {
     organizationId: string;
     name: string;
 }
+export interface GroupUser {
+    id: string;
+    organizationId: string;
+    groupId: string;
+    userId: string;
+}
+export interface GroupUserConfirmation {
+    id: string;
+    organizationId: string;
+    groupId: string;
+    lowercasedEmailAddress: string;
+}

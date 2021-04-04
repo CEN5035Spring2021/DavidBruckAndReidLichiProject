@@ -38,8 +38,7 @@ describe('Creating organization sends email', () => {
                 timeout: 30000
             });
 
-        const createNewOrganization =
-            await page.$('div.organizations > div.items > input[ type="button" ][ value="Create new organization" ]');
+        const createNewOrganization = await page.$('div.organizations > div.items > button');
 
         await createNewOrganization?.click();
 
@@ -56,7 +55,7 @@ describe('Creating organization sends email', () => {
         await createOrganizationButton?.click();
 
         await expect(page).toMatch(
-            'Server response: ConfirmationEmailSent',
+            'Confirmation email sent',
             {
                 timeout: 30000
             });

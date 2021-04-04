@@ -23,12 +23,6 @@
     onMount(() => nameInput.focus());
 
     const createOrganization = async() => {
-        const error = (err: string) => {
-            if (!feedback) {
-                feedback = err;
-            }
-        };
-
         if (name) {
             feedback = '';
             nameInvalid = false;
@@ -66,7 +60,9 @@
                     await runUnderOrganizationStore(organizationStore => organizationStore.append({
                         name: response.name,
                         users: [
-                            $emailAddress as string
+                            {
+                                emailAddress: $emailAddress as string
+                            }
                         ],
                         admin: true
                     }));
@@ -82,9 +78,8 @@
                     feedback = `Unexpected server response type ${response.type as string}`;
                     break;
             }
-            feedback = `Server response: ${response.type}`;
         } catch (e) {
-            error(`Error: ${e && (e as { message: string }).message || e as string}`);
+            feedback = `Error: ${e && (e as { message: string }).message || e as string}`;
             throw (e);
         } finally {
             $creatingOrganization = false;
