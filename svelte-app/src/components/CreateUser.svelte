@@ -9,6 +9,7 @@
     import type { Writable } from 'svelte/store';
     import htmlEscapeWithNewLineBreaks from '../modules/htmlEscapeWithNewlineBreaks';
     import { subscribePleaseWait } from '../stores/globalFeedback';
+    import { emailAddressMatch } from '../modules/emailAddressMatch';
 
     export let close: () => void;
     export let creatingUser: Writable<boolean>;
@@ -143,20 +144,6 @@
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createUser();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
-
-    function emailAddressMatch(emailAddress: string) : boolean {
-        // // Doing everything in a single Regexp pattern does not work in Microsoft Edge (no negative look behind)
-        // return /((?<!@)[^@])+@[^_@]+(?!.*(?:_|@))/.test(localEmailAddress);
-
-        // Cross-platform multi-Regexp solution
-        const domainMatch = /@[^_@]+(?!.*(?:_|@))/.exec(emailAddress);
-        if (!domainMatch) {
-            return false;
-        }
-        // Single at (@) sign match
-        return emailAddress.length === domainMatch.index +
-            /[^@]+(?!.*@)/.exec(emailAddress.split('').reverse().join(''))?.index;
-    }
 
     async function createUserImplementation(
         userStore: UserStore,

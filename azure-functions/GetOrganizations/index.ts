@@ -1,20 +1,14 @@
 import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
-import type { Group, IUser, Organization, OrganizationUser, User } from '../modules/serverInterfaces';
-import { getExistingUser } from '../modules/validateSignature';
-import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
-import { getGroupsContainer, getOrganizationsContainer, getOrganizationUsersContainer } from '../modules/database';
+import type { IUser, OrganizationUser } from '../modules/serverInterfaces';
+import { getValidatedUser } from '../modules/validateSignature';
+import type { DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
+import { getGroupsContainer, getOrganizationUsersContainer } from '../modules/database';
+import type { GroupResponse, OrganizationResponse, UserResponse } from '../modules/populateOrganization';
+import { populateOrganization, populateOrganizationUsers } from '../modules/populateOrganization';
 
-export interface OrganizationsResponse {
+interface OrganizationsResponse {
     organizations: OrganizationResponse[];
-}
-export interface OrganizationResponse {
-    name?: string;
-    admin?: boolean;
-    users?: string[];
-    groups?: GroupResponse[];
-}
-export interface GroupResponse {
-    name: string;
+    users?: UserResponse[];
 }
 
 const httpTrigger: AzureFunction = async function(context: Context, req: HttpRequest): Promise<void> {
@@ -27,22 +21,44 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         throw new Error('Request body lacks emailAddress');
     }
 
+    const { database, users, userId } = await getValidatedUser({
+        method: req.method,
+        url: req.url,
+        body
+    });
+
+    const existingOrganizations = new Map<string, OrganizationResponse>();
+    const usersToOrganizations = new Map<string, string[]>();
+    const usersToGroups = new Map<string, GroupResponse[]>();
+    const organizations = await getOrganizations({
+        database,
+        existingOrganizations,
+        userId,
+        usersToOrganizations,
+        usersToGroups
+    });
+
     return result({
         context,
-        organizations: await getOrganizations(
-            await getExistingUser({
-                method: req.method,
-                url: req.url,
-                body
-            }))
+        response: {
+            organizations,
+            users: await populateOrganizationUsers({
+                users,
+                existingOrganizations,
+                usersToOrganizations,
+                usersToGroups
+            })
+        }
     });
 };
 
 async function getOrganizations(
-    { database, users, userId }: {
+    { database, existingOrganizations, userId, usersToOrganizations, usersToGroups }: {
         database: DatabaseResponse;
-        users: ContainerResponse;
+        existingOrganizations: Map<string, OrganizationResponse>;
         userId: string | undefined;
+        usersToOrganizations: Map<string, string[]>;
+        usersToGroups: Map<string, GroupResponse[]>;
     }) : Promise<OrganizationResponse[]> {
 
     const USER_ID = '@userId';
@@ -57,217 +73,45 @@ async function getOrganizations(
         ]
     }) as QueryIterator<OrganizationUser & Resource>;
 
-    const organizations: OrganizationResponse[] = [];
     do {
         const { resources } = await organizationUsersReader.fetchNext();
 
-        const existingOrganizations : Map<string, OrganizationResponse> = new Map(
-            resources.map(organization => [
+        for (const organization of resources) {
+            existingOrganizations.set(
                 organization.organizationId,
                 {
                     admin: organization.admin
-                }
-            ]));
-
-        await populateOrganization({ database, users, existingOrganizations, organizationUsers });
-
-        organizations.push(...existingOrganizations.values());
+                });
+        }
     } while (organizationUsersReader.hasMoreResults());
 
+    const groups = await getGroupsContainer(database);
+
+    await populateOrganization({
+        userId,
+        database,
+        groups,
+        existingOrganizations,
+        usersToOrganizations,
+        usersToGroups,
+        organizationUsers
+    });
+
+    const organizations = [ ...existingOrganizations.values() ];
+
     // Using Order By in the database queries won't work because we query multiple collections
-    // in batches so it might grab earlier-ordered organizations / users in a subsequent batch
+    // in batches so it might grab earlier-ordered organizations / users in a subsequent batch.
+    // Instead, we sort everything before returning the response.
     organizations.sort((a, b) => a.name === b.name ? 0 : (a.name > b.name ? 1 : -1));
-    for (const organization of organizations) {
-        organization.users?.sort();
-    }
 
     return organizations;
 }
 
-async function populateOrganization(
-    { database, users, existingOrganizations, organizationUsers }: {
-        database: DatabaseResponse;
-        users: ContainerResponse;
-        existingOrganizations: Map<string, OrganizationResponse>;
-        organizationUsers: ContainerResponse;
-    }) : Promise<void> {
-
-    if (!existingOrganizations.size) {
-        return;
-    }
-
-    const organizations = await getOrganizationsContainer(database);
-    const organizationsReader = organizations.container.items.query({
-        query: `SELECT * FROM root r WHERE r.id IN (${
-            [ ...Array(existingOrganizations.size).keys() ]
-                .map(getIdParamName)
-                .join(',')
-        })`,
-        parameters: [ ...existingOrganizations.keys() ].map(
-            ((id, organizationOrdinal) => ({
-                name: getIdParamName(organizationOrdinal),
-                value: id
-            })))
-    }) as QueryIterator<Organization & Resource>;
-
-    do {
-        for (const existingOrganization of (await organizationsReader.fetchNext()).resources) {
-            existingOrganizations.get(existingOrganization.id).name = existingOrganization.name;
-        }
-    } while (organizationsReader.hasMoreResults());
-
-    await populateOrganizationUsers({
-        users,
-        existingOrganizations,
-        organizationUsers
-    });
-
-    await populateOrganizationGroups({
-        database,
-        existingOrganizations
-    });
-}
-
-async function populateOrganizationUsers(
-    { users, existingOrganizations, organizationUsers }: {
-        users: ContainerResponse;
-        existingOrganizations: Map<string, OrganizationResponse>;
-        organizationUsers: ContainerResponse;
-    }) : Promise<void> {
-
-    const adminOrganizations : Map<string, OrganizationResponse> = new Map(
-        [ ...existingOrganizations.entries() ]
-            .filter(existingOrganization => existingOrganization[1].admin));
-
-    if (!adminOrganizations.size) {
-        return;
-    }
-
-    const organizationUsersReader = organizationUsers.container.items.query({
-        query: `SELECT * FROM root r WHERE r.organizationId IN (${
-            [ ...Array(adminOrganizations.size).keys() ]
-                .map(getIdParamName)
-                .join(',')
-        })`,
-        parameters: [ ...adminOrganizations.keys() ].map(
-            ((id, organizationOrdinal) => ({
-                name: getIdParamName(organizationOrdinal),
-                value: id
-            })))
-    }) as QueryIterator<OrganizationUser & Resource>;
-
-    const usersToOrganizations = new Map<string, string[]>();
-    do {
-        for (const existingOrganizationUser of (await organizationUsersReader.fetchNext()).resources) {
-            let existingUsersToOrganization = usersToOrganizations.get(existingOrganizationUser.userId);
-            if (!existingUsersToOrganization) {
-                usersToOrganizations.set(existingOrganizationUser.userId, existingUsersToOrganization = []);
-            }
-            existingUsersToOrganization.push(existingOrganizationUser.organizationId);
-        }
-    } while (organizationUsersReader.hasMoreResults());
-
-    await populateUsers({
-        users,
-        existingOrganizations,
-        usersToOrganizations
-    });
-}
-
-async function populateUsers(
-    { users, existingOrganizations, usersToOrganizations }: {
-        users: ContainerResponse;
-        existingOrganizations: Map<string, OrganizationResponse>;
-        usersToOrganizations: Map<string, string[]>;
-    }) : Promise<void> {
-
-    if (!usersToOrganizations.size) {
-        return;
-    }
-
-    const usersReader = users.container.items.query({
-        query: `SELECT * FROM root r WHERE r.id IN (${
-            [ ...Array(usersToOrganizations.size).keys() ]
-                .map(getIdParamName)
-                .join(',')
-        })`,
-        parameters: [ ...usersToOrganizations.keys() ].map(
-            ((id, userOrdinal) => ({
-                name: getIdParamName(userOrdinal),
-                value: id
-            })))
-    }) as QueryIterator<User & Resource>;
-
-    do {
-        for (const existingUser of (await usersReader.fetchNext()).resources) {
-            for (const organizationId of usersToOrganizations.get(existingUser.id)) {
-                const existingOrganization = existingOrganizations.get(organizationId);
-                if (existingOrganization.users) {
-                    existingOrganization.users.push(existingUser.emailAddress);
-                } else {
-                    existingOrganization.users = [ existingUser.emailAddress ];
-                }
-            }
-        }
-    } while (usersReader.hasMoreResults());
-}
-
-async function populateOrganizationGroups(
-    { database, existingOrganizations }: {
-        database: DatabaseResponse;
-        existingOrganizations: Map<string, OrganizationResponse>;
-    }) : Promise<void> {
-
-    const adminOrganizations : Map<string, OrganizationResponse> = new Map(
-        [ ...existingOrganizations.entries() ]
-            .filter(existingOrganization => existingOrganization[1].admin));
-
-    if (!adminOrganizations.size) {
-        return;
-    }
-
-    const groups = await getGroupsContainer(database);
-
-    const groupsReader = groups.container.items.query({
-        query: `SELECT * FROM root r WHERE r.organizationId IN (${
-            [ ...Array(adminOrganizations.size).keys() ]
-                .map(getIdParamName)
-                .join(',')
-        })`,
-        parameters: [ ...adminOrganizations.keys() ].map(
-            ((id, organizationOrdinal) => ({
-                name: getIdParamName(organizationOrdinal),
-                value: id
-            })))
-    }) as QueryIterator<Group & Resource>;
-
-    do {
-        for (const existingGroup of (await groupsReader.fetchNext()).resources) {
-            const existingOrganization = existingOrganizations.get(existingGroup.organizationId);
-            const newGroup: GroupResponse = {
-                name: existingGroup.name
-            };
-            if (existingOrganization.groups) {
-                existingOrganization.groups.push(newGroup);
-            } else {
-                existingOrganization.groups = [ newGroup ];
-            }
-        }
-    } while (groupsReader.hasMoreResults());
-}
-
-function getIdParamName(organizationOrdinal: number) {
-    return `@id${organizationOrdinal}`;
-}
-
 function result(
-    { context, organizations }: {
+    { context, response }: {
         context: Context;
-        organizations: OrganizationResponse[];
+        response: OrganizationsResponse;
     }) : void {
-    const response: OrganizationsResponse = {
-        organizations
-    };
     context.res = {
         body: JSON.stringify(response),
         headers: {

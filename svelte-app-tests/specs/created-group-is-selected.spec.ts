@@ -38,8 +38,7 @@ describe('A created group is immediately selected', () => {
                 timeout: 30000
             });
 
-        const createNewOrganization =
-            await page.$('div.organizations > div.items > input[ type="button" ][ value="Create new organization" ]');
+        const createNewOrganization = await page.$('div.organizations > div.items > button');
 
         await createNewOrganization?.click();
 
@@ -55,7 +54,7 @@ describe('A created group is immediately selected', () => {
         await createOrganizationButton?.click();
 
         await expect(page).toMatch(
-            'Server response: ConfirmationEmailSent',
+            'Confirmation email sent',
             {
                 timeout: 30000
             });
@@ -106,8 +105,7 @@ describe('A created group is immediately selected', () => {
 
         await organization?.click();
 
-        const createNewGroup =
-            await page.$('div.groups > div.items > input[ type="button" ][ value="Create new group" ]');
+        const createNewGroup = await page.$('div.groups > div.items > button');
 
         await createNewGroup?.click();
 
@@ -122,7 +120,7 @@ describe('A created group is immediately selected', () => {
         await createGroupButton?.click();
 
         await expect(page).toMatch(
-            'Server response: Created',
+            'Created',
             {
                 timeout: 30000
             });

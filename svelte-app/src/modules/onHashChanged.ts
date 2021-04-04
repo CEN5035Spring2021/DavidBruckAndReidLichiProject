@@ -1,7 +1,7 @@
 import OpenCrypto from 'opencrypto';
 import { get } from 'svelte/store';
 import { globalFeedback } from '../stores/globalFeedback';
-import { organizations, confirmingOrganization, runUnderOrganizationStore } from '../stores/organization';
+import { confirmingOrganization, runUnderOrganizationStore } from '../stores/organization';
 import { emailAddress, encryptionPublicKey, signingPublicKey } from '../stores/user';
 import { api } from './api';
 import getDefaultFunctionsUrl from './getFunctionsUrl';
@@ -49,13 +49,15 @@ export default async function onHashChanged(
             try {
                 const POST = 'POST';
                 const url = `${getDefaultFunctionsUrl()}api/createorganization`;
+                const localEmailAddress = get(emailAddress);
+                const encryptionPublicKey = await crypt.cryptoPublicToPem(tempEncryptionPublicKey) as string;
                 const createOrganizationRequest = await sign<CreateOrganizationRequest>({
                     url,
                     method: POST,
                     body: {
                         confirmation,
-                        emailAddress: get(emailAddress),
-                        encryptionKey: await crypt.cryptoPublicToPem(tempEncryptionPublicKey) as string,
+                        emailAddress: localEmailAddress,
+                        encryptionKey: encryptionPublicKey,
                         signingKey: await crypt.cryptoPublicToPem(tempSigningPublicKey) as string
                     },
                     crypt,
@@ -71,6 +73,12 @@ export default async function onHashChanged(
                     case CreateOrganizationResponseType.Created:
                         await runUnderOrganizationStore(organizationStore => organizationStore.append({
                             name: response.name,
+                            users: [
+                                {
+                                    emailAddress: localEmailAddress,
+                                    encryptionPublicKey: encryptionPublicKey
+                                }
+                            ],
                             admin: true
                         }));
                         globalFeedback.update(feedback =>

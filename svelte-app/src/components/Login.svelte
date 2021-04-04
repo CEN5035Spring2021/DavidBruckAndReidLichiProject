@@ -149,20 +149,66 @@
                     url,
                     body: organizationsRequest
                 });
+                const usersToEncryptionKey = organizationsResponse.users && new Map<string, string>(
+                    organizationsResponse.users.map(user => {
+                        if (!user || !user.emailAddress) {
+                            throw new Error('Server returned a user without an email address');
+                        }
+                        if (!user.encryptionPublicKey) {
+                            throw new Error('Server returned a user without an encryption key');
+                        }
+                        return [ user.emailAddress, user.encryptionPublicKey ];
+                    }));
                 let tempOrganizations: IOrganization[];
                 if (organizationsResponse.organizations?.length) {
-                    tempOrganizations = organizationsResponse.organizations.map(organization => {
-                        if (!organization.name) {
-                            throw new Error('Server returned organization without a name');
+                    tempOrganizations = organizationsResponse.organizations.map<IOrganization>(organization => {
+                        if (!organization || !organization.name) {
+                            throw new Error('Server returned an organization without a name');
                         }
                         return {
                             name: organization.name,
                             admin: organization.admin,
-                            users: organization.users,
+                            users: organization.users?.map(
+                                emailAddress => {
+                                    if (!emailAddress) {
+                                        throw new Error('Server returned an organization user without an email address');
+                                    }
+                                    const encryptionPublicKey = usersToEncryptionKey.get(emailAddress);
+                                    if (!encryptionPublicKey) {
+                                        throw new Error('Server returned an organization user without an encryption key');
+                                    }
+                                    return {
+                                        emailAddress,
+                                        encryptionPublicKey
+                                    };
+                                }),
                             groups: organization.groups?.map(
-                                organizationGroup => ({
-                                    name: organizationGroup.name
-                                }))
+                                organizationGroup => {
+                                    if (!organizationGroup || !organizationGroup.name) {
+                                        throw new Error('Server returned an organization group without a name');
+                                    }
+                                    return {
+                                        name: organizationGroup.name,
+                                        users: organizationGroup.users?.map(
+                                            emailAddress => {
+                                                if (!emailAddress) {
+                                                    throw new Error(
+                                                        'Server returned an organization group user without an email ' +
+                                                        'address');
+                                                }
+                                                const encryptionPublicKey = usersToEncryptionKey.get(emailAddress);
+                                                if (!encryptionPublicKey) {
+                                                    throw new Error(
+                                                        'Server returned an organization group user without an ' +
+                                                        'encryption key');
+                                                }
+                                                return {
+                                                    emailAddress,
+                                                    encryptionPublicKey
+                                                };
+                                            })
+                                    };
+                                })
                         };
                     });
                     await runUnderOrganizationStore(organizationStore => organizationStore.update({

@@ -7,6 +7,10 @@ export interface IUser {
     encryptedSigningKey: string;
     emailAddress: string;
 }
+export interface IOrganizationUser {
+    emailAddress?: string;
+    encryptionPublicKey?: string;
+}
 
 export class UserStore extends Store {
     public async getUser(lowercasedEmailAddress: string, next?: (user: IUser) => Promise<void>): Promise<IUser> {

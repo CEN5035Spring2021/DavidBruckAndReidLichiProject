@@ -2,14 +2,21 @@ import { writable, get, readable } from 'svelte/store';
 import { StoreName, runUnderStore, Store } from '../modules/database';
 import { showUnconditionalMessage, unconditionalMessage } from './globalFeedback';
 import type { IGroup, IHasGroups } from './group';
+import { updateGroupUsers } from './group';
 import { selectedGroup } from './group';
 import { updateGroups } from './group';
 import { SettingsStore } from './settings';
+import type { IOrganizationUser } from './user';
 import { emailAddress } from './user';
+
+const GREATER = 1;
+const EQUALS = 0;
+const LESS = -1;
+const NOT_FOUND = -1;
 
 export interface IOrganization extends IHasGroups {
     name: string;
-    users?: string[];
+    users?: IOrganizationUser[];
     admin?: boolean;
     groups?: IGroup[];
 }
@@ -53,6 +60,61 @@ export class OrganizationStore extends Store {
         });
     }
 
+    public async appendGroup({ group } : {
+        group: IGroup;
+    }): Promise<void> {
+        const existingOrganization = get(_selectedOrganization);
+
+        updateGroups({
+            organization: existingOrganization,
+            groups: [ group ]
+        });
+
+        const putRequest = this._store.put(existingOrganization);
+        await new Promise((resolve, reject) => {
+            putRequest.onsuccess = resolve;
+            putRequest.onerror = () => reject(putRequest.error);
+        });
+
+        for (const organizationGroupsUpdateListener of organizationGroupsUpdateListeners) {
+            organizationGroupsUpdateListener();
+        }
+    }
+
+    public async appendGroupUser({ user } : {
+        user: IOrganizationUser;
+    }): Promise<void> {
+        const existingOrganization = get(_selectedOrganization);
+
+        const existingGroup = existingOrganization.groups?.find(
+            existingGroup => existingGroup.name === get(selectedGroup)?.name);
+
+        if (!existingGroup) {
+            throw new Error('Could not find selected organization group by name');
+        }
+
+        const fireGroupUsersUpdate = updateGroupUsers({
+            group: existingGroup,
+            users: [ user ]
+        });
+
+        updateOrganizationUsers({
+            organization: existingOrganization,
+            users: [ user ]
+        });
+
+        const putRequest = this._store.put(existingOrganization);
+        await new Promise((resolve, reject) => {
+            putRequest.onsuccess = resolve;
+            putRequest.onerror = () => reject(putRequest.error);
+        });
+
+        for (const organizationUsersUpdateListener of organizationUsersUpdateListeners) {
+            organizationUsersUpdateListener();
+        }
+        fireGroupUsersUpdate();
+    }
+
     private async appendImpl({ lowercasedEmailAddress, organization } : {
         lowercasedEmailAddress: string;
         organization: IOrganization;
@@ -85,6 +147,10 @@ export class OrganizationStore extends Store {
                 organization: existingOrganization,
                 groups: organization.groups
             });
+            updateOrganizationUsers({
+                organization: existingOrganization,
+                users: organization.users
+            });
             putRequest = this._store.put(existingOrganization);
         } else {
             putRequest = this._store.put(nonCompositeKeyOrganization);
@@ -96,15 +162,78 @@ export class OrganizationStore extends Store {
         });
     }
 }
+function updateOrganizationUsers({ organization, users } : {
+        organization: IOrganization;
+        users?: IOrganizationUser[];
+    }): void {
+    if (!users) {
+        return;
+    }
+    if (organization.users) {
+        const existingUsers = new Map<string, IOrganizationUser>(
+            organization.users.map(user => [ user.emailAddress, user ]));
+        let requiresReordering: boolean | undefined;
+        for (const user of users) {
+            const existingUser = existingUsers.get(user.emailAddress.toLowerCase());
+            if (existingUser) {
+                existingUser.encryptionPublicKey = user.encryptionPublicKey;
+            } else if (existingUser.encryptionPublicKey !== user.encryptionPublicKey) {
+                organization.users.push({
+                    emailAddress: user.emailAddress,
+                    encryptionPublicKey: user.encryptionPublicKey
+                });
+                requiresReordering = true;
+            }
+        }
+        if (requiresReordering) {
+            organization.users.sort(
+                (a, b) => a.emailAddress === b.emailAddress
+                    ? EQUALS
+                    : (a.emailAddress > b.emailAddress ? GREATER : LESS));
+        }
+    } else {
+        organization.users = users;
+    }
+}
+
+const organizationUsersUpdateListeners: Array<() => void> = [];
+const organizationGroupsUpdateListeners: Array<() => void> = [];
 
 const _selectedOrganization = writable<IOrganization>(null);
 export const organizations = writable<string[]>([]);
-export const organizationUsers = readable<string[]>(
+export const organizationUsers = readable<IOrganizationUser[]>(
     [],
-    set => _selectedOrganization.subscribe(value => value && set(value.users || [])));
+    set => {
+        const organizationUsersUpdateListener = () => set(get(_selectedOrganization).users || []);
+        organizationUsersUpdateListeners.push(organizationUsersUpdateListener);
+        const unsubscribe = _selectedOrganization.subscribe(value => value && set(value.users || []));
+        return () => {
+            const organizationUsersUpdateListenerIdx =
+                organizationUsersUpdateListeners.indexOf(organizationUsersUpdateListener);
+            if (organizationUsersUpdateListenerIdx > NOT_FOUND) {
+                organizationUsersUpdateListeners.splice(organizationUsersUpdateListenerIdx, 1);
+            }
+            unsubscribe();
+        };
+    });
 export const organizationGroups = readable<IGroup[]>(
     [],
-    set => _selectedOrganization.subscribe(value => value && set(value.groups || [])));
+    set => {
+        const organizationGroupsUpdateListener = () => set(get(_selectedOrganization).groups || []);
+        organizationGroupsUpdateListeners.push(organizationGroupsUpdateListener);
+        const unsubscribe = _selectedOrganization.subscribe(value => value && set(value.groups || []));
+        return () => {
+            const organizationGroupsUpdateListenerIdx =
+                organizationGroupsUpdateListeners.indexOf(organizationGroupsUpdateListener);
+            if (organizationGroupsUpdateListenerIdx > NOT_FOUND) {
+                organizationGroupsUpdateListeners.splice(organizationGroupsUpdateListenerIdx, 1);
+            }
+            unsubscribe();
+        };
+    });
+export const isOrganizationAdmin = readable<boolean>(
+    false,
+    set => _selectedOrganization.subscribe(value => value && set(value.admin || false)));
 export const confirmingOrganization = writable<boolean>(false);
 export const selectedOrganization = writable<string>(null);
 export function runUnderOrganizationStore<TState, TResult>(
@@ -119,6 +248,7 @@ export function runUnderOrganizationStore<TState, TResult>(
         state
     });
 }
+export const switchingOrganization = writable<boolean>(false);
 
 confirmingOrganization.subscribe(value => {
     unconditionalMessage.update(() => value
@@ -133,15 +263,23 @@ confirmingOrganization.subscribe(value => {
 selectedOrganization.subscribe(value => {
     if (value) {
         selectedGroup.set(null);
+        switchingOrganization.set(true);
         runUnderOrganizationStore(store => store.get(value))
-            .then(organization => _selectedOrganization.set(organization))
+            .then(organization => {
+                switchingOrganization.set(false);
+                _selectedOrganization.set(organization);
+            })
             .catch(console.error);
     }
 });
 selectedGroup.subscribe(value => {
     if (value && !get(_selectedOrganization).groups?.some(group => group === value)) {
+        switchingOrganization.set(true);
         runUnderOrganizationStore(store => store.get(get(selectedOrganization)))
-            .then(organization => _selectedOrganization.set(organization))
+            .then(organization => {
+                switchingOrganization.set(false);
+                _selectedOrganization.set(organization);
+            })
             .catch(console.error);
     }
 });

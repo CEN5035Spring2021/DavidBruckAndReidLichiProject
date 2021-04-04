@@ -1,5 +1,5 @@
 <script lang=ts>
-    import { organizations } from '../stores/organization';
+    import { organizations, switchingOrganization } from '../stores/organization';
     import { writable } from 'svelte/store';
     import CreateOrganization from './CreateOrganization.svelte';
     import Organization from './Organization.svelte';
@@ -14,7 +14,8 @@
         ? clazz
         : `${clazz} organizations`;
 
-    const createOrganization = () => !$creatingOrganization && (createOrganizationModalOpen = true);
+    const createOrganization = () =>
+        !$creatingOrganization && !$switchingOrganization && (createOrganizationModalOpen = true);
     const closeOrganizationCreation = () => $creatingOrganization as boolean || (createOrganizationModalOpen = false);
 </script>
 
@@ -26,7 +27,7 @@
                 <Organization { organization } />
             {/each }
         </ul>
-        <input type=button value="Create new organization" on:click={ createOrganization } />
+        <button on:click={ createOrganization }>Create new organization</button>
         <br />
     </div>
 </div>
@@ -50,12 +51,20 @@
         overflow: auto;
     }
 
-    input[ type=button ] {
-        width: 100%;
+    button {
+        padding: 5px 10px;
         cursor: pointer;
         background-color: #efefef;
         color: #000;
+        white-space: nowrap;
     }
+        button::before, button::after {
+            content: " ⊕ ";
+            font-weight: bolder;
+            color: #f5793a;
+            vertical-align: baseline;
+            font-size: 18px;
+        }
 
     ul {
         list-style: none;

@@ -1,7 +1,7 @@
 <script lang=ts>
     import { writable } from 'svelte/store';
 
-    import { organizationGroups, selectedOrganization } from '../stores/organization';
+    import { organizationGroups, selectedOrganization, switchingOrganization } from '../stores/organization';
     import CreateGroup from './CreateGroup.svelte';
     import Group from './Group.svelte';
 
@@ -15,7 +15,7 @@
         ? clazz
         : `${clazz} groups`;
 
-    const createGroup = () => !$creatingGroup && (createGroupModalOpen = true);
+    const createGroup = () => !$creatingGroup && !$switchingOrganization && (createGroupModalOpen = true);
     const closeGroupCreation = () => $creatingGroup as boolean || (createGroupModalOpen = false);
 </script>
 
@@ -28,7 +28,7 @@
                     <Group { group } />
                 { /each }
             </ul>
-            <input type=button value="Create new group" on:click={ createGroup } />
+            <button on:click={ createGroup }>Create new group</button>
             <br />
         { :else }
             <h3>Select an organization</h3>
@@ -55,12 +55,20 @@
         overflow: auto;
     }
 
-    input[ type=button ] {
-        width: 100%;
+    button {
+        padding: 5px 10px;
         cursor: pointer;
         background-color: #efefef;
         color: #000;
+        white-space: nowrap;
     }
+        button::before, button::after {
+            content: " ⊕ ";
+            font-weight: bolder;
+            color: #f5793a;
+            vertical-align: baseline;
+            font-size: 18px;
+        }
 
     ul {
         list-style: none;

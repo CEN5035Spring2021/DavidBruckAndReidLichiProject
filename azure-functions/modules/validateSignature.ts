@@ -60,7 +60,7 @@ export function validateSignature<T>(
     };
 }
 
-export async function getExistingUser<T extends IUser>(
+export async function getValidatedUser<T extends IUser>(
     { method, url, body, database, users } : {
         method: string;
         url: string;
