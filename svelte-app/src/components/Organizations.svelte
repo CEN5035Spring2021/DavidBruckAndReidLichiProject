@@ -28,7 +28,6 @@
             {/each }
         </ul>
         <button on:click={ createOrganization }>Create new organization</button>
-        <br />
     </div>
 </div>
 

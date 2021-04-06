@@ -1,7 +1,7 @@
 import 'expect-puppeteer';
 
 describe('Existing user login loads with empty inputs for email and password', () => {
-    beforeAll(async() => {
+    beforeEach(async() => {
         await page.goto('http://localhost:5000');
         await page.waitForSelector(
             '.modal',

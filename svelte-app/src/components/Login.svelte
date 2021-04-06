@@ -1,16 +1,17 @@
 <script lang=ts>
     import OpenCrypto from 'opencrypto';
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { writable } from 'svelte/store';
     import {
-        emailAddress, encryptionPrivateKey, encryptionPublicKey, signingPrivateKey, signingPublicKey, runUnderUserStore
+        emailAddress, encryptionPrivateKey, encryptionPublicKey, signingPrivateKey, signingPublicKey, runUnderUserStore,
+        groupUserConfirmationEmailAddress
     } from '../stores/user';
     import type { IUser, UserStore } from '../stores/user';
     import CreateUser from './CreateUser.svelte';
     import type { OrganizationsRequest, OrganizationsResponse } from '../modules/serverInterfaces';
     import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
     import { sign } from '../modules/sign';
-    import { organizations, runUnderOrganizationStore } from '../stores/organization';
+    import { runUnderOrganizationStore } from '../stores/organization';
     import type { IOrganization } from '../stores/organization';
     import onHashChanged from '../modules/onHashChanged';
     import { subscribePleaseWait } from '../stores/globalFeedback';
@@ -25,8 +26,17 @@
     let password: string;
     let passwordInvalid: boolean;
     let createUserModalOpen : boolean;
-    let creatingUser = writable(false);
+    const creatingUser = writable(false);
     const loggingIn = writable(false);
+
+    const groupUserConfirmationEmailAddressSubscription =
+        groupUserConfirmationEmailAddress.subscribe(value => {
+            if (!value || $loggingIn) {
+                return;
+            }
+
+            $emailAddress = $groupUserConfirmationEmailAddress as string;
+        });
 
     onMount(() => emailInput.focus());
 
@@ -224,13 +234,16 @@
                 $encryptionPublicKey = tempEncryptionPublicKey;
                 $signingPrivateKey = tempSigningPrivateKey;
                 $signingPublicKey = tempSigningPublicKey;
-                $organizations = tempOrganizations.map(organization => organization.name);
             }
         } catch (e) {
             error(`Error: ${e && (e as { message: string }).message || e as string}`);
             throw (e);
         } finally {
             $loggingIn = false;
+
+            if ($groupUserConfirmationEmailAddress && !$encryptionPublicKey) {
+                $emailAddress = $groupUserConfirmationEmailAddress as string;
+            }
         }
     };
     const safeLogin = () => login().catch(console.error);
@@ -254,7 +267,11 @@
     const createUser = () => !$loggingIn && (createUserModalOpen = true);
     const closeUserCreation = () => $creatingUser as boolean || (createUserModalOpen = false);
 
-    subscribePleaseWait(loggingIn, 'Logging in...');
+    const pleaseWaitSubscription = subscribePleaseWait(loggingIn, 'Logging in...');
+    onDestroy(() => {
+        groupUserConfirmationEmailAddressSubscription();
+        pleaseWaitSubscription();
+    });
 </script>
 
 <div class={ clazz }>
@@ -262,8 +279,8 @@
         <legend>&nbsp;Existing user&nbsp;</legend>
         <label for=email>Email:</label>
         <input type=email id=email bind:value={ $emailAddress } on:keypress={ safeOnKeyPress }
-               class:invalid={ emailAddressInvalid } disabled={ createUserModalOpen || $loggingIn }
-               bind:this={ emailInput } />
+               class:invalid={ emailAddressInvalid } bind:this={ emailInput }
+               disabled={ createUserModalOpen || $loggingIn || !!$groupUserConfirmationEmailAddress } />
         <br />
         <label for=password>Password:</label>
         <input type=password id=password bind:value={ password } on:keypress={ safeOnKeyPress }
@@ -299,9 +316,11 @@
 
     input {
         width: 100%;
-        background-color: #fff;
-        color: #333;
     }
+        input:not(:disabled) {
+            background-color: #fff;
+            color: #333;
+        }
 
     input[ type=button ] {
         cursor: pointer;

@@ -1,5 +1,5 @@
 <script lang=ts>
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import Modal from './Modal.svelte';
     import { emailAddress } from '../stores/user';
     import { sign } from '../modules/sign';
@@ -86,7 +86,8 @@
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createGroup();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
 
-    subscribePleaseWait(creatingGroup, 'Creating group...');
+    const pleaseWaitSubscription = subscribePleaseWait(creatingGroup, 'Creating group...');
+    onDestroy(pleaseWaitSubscription);
 </script>
 
 <Modal { close }>
@@ -115,9 +116,11 @@
 
     input {
         width: 100%;
-        background-color: #fff;
-        color: #333;
     }
+        input:not(:disabled) {
+            background-color: #fff;
+            color: #333;
+        }
 
     input[ type=button ] {
         cursor: pointer;

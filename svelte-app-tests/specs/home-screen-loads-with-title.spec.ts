@@ -1,7 +1,7 @@
 import 'expect-puppeteer';
 
 describe('Home screen loads with title', () => {
-    beforeAll(async() => {
+    beforeEach(async() => {
         await page.goto('http://localhost:5000');
         await page.waitForSelector(
             '.modal',

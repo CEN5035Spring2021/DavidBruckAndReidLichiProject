@@ -23,8 +23,13 @@
     import Organizations from './components/Organizations.svelte';
     import Groups from './components/Groups.svelte';
     import Conversations from './components/Conversations.svelte';
+    import { onMount, onDestroy } from 'svelte';
 
     const checkingBrowser = writable(true);
+
+    onMount(() => (onHashChanged as (options: Partial<HashChangeEvent>) => void)({
+        newURL: '' // This will trigger the Promise catch behavior
+    }));
 
     runUnderSettingsStore(store => store.supportsRSASigning())
         .then(({ value, persisted }) => {
@@ -52,7 +57,8 @@
                 }
             ]));
 
-    subscribePleaseWait(checkingBrowser, 'Checking browser for security features...');
+    const pleaseWaitSubscription = subscribePleaseWait(checkingBrowser, 'Checking browser for security features...');
+    onDestroy(pleaseWaitSubscription);
 </script>
 
 <h1>

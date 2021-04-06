@@ -2,9 +2,11 @@ import 'expect-puppeteer';
 import { simpleParser } from 'mailparser';
 import { waitForEmail } from '../modules/smtpCoordinator';
 
-describe('A created group is immediately selected', () => {
-    const EMAIL_ADDRESS = 'created-group-is-immediately-selected@cen.5035';
-    const GROUP_NAME = 'Group selected test';
+describe('Confirming user selects group', () => {
+    const EMAIL_ADDRESS = 'user-confirmation-selects-group@cen.5035';
+    const ORGANIZATION_NAME = 'Organization - user confirmation test';
+    const GROUP_NAME = 'Group - user confirmation test';
+    const GROUP_USER_EMAIL_ADDRESS = 'user-confirmation-selects-group2@cen.5035';
 
     beforeEach(async() => {
         await page.goto('http://localhost:5000');
@@ -15,21 +17,21 @@ describe('A created group is immediately selected', () => {
                 timeout: 30000
             });
 
-        const createNewUser = await page.$('button');
+        let createNewUser = await page.$('button');
 
         await createNewUser?.click();
 
-        const emailInput = await page.$('[ id="newEmail" ]');
-        const passwordInput = await page.$('[ id="newPassword" ]');
-        const confirmPasswordInput = await page.$('[ id="confirmPassword" ]');
-        const password = 'MyT3stP@ss';
+        let emailInput = await page.$('[ id="newEmail" ]');
+        let passwordInput = await page.$('[ id="newPassword" ]');
+        let confirmPasswordInput = await page.$('[ id="confirmPassword" ]');
+        let password = 'MyT3stP@ss';
 
         await emailInput?.type(EMAIL_ADDRESS);
         await passwordInput?.type(password);
         await confirmPasswordInput?.type(password);
 
         const createUserButtonSelector = '.modal > div > input[ type="button" ][ value="Create user" ]';
-        const createUserButton = await page.$(createUserButtonSelector);
+        let createUserButton = await page.$(createUserButtonSelector);
 
         await createUserButton?.click();
         await page.waitForSelector(
@@ -45,8 +47,7 @@ describe('A created group is immediately selected', () => {
 
         let nameInput = await page.$('[ id="newName" ]');
 
-        const groupSelectTestName = 'GroupSelectTest';
-        await nameInput?.type(groupSelectTestName);
+        await nameInput?.type(ORGANIZATION_NAME);
 
         const createOrganizationButton =
             await page.$('.modal > div > input[ type="button" ][ value="Create organization" ]');
@@ -95,7 +96,7 @@ describe('A created group is immediately selected', () => {
             {
                 timeout: 30000
             },
-            groupSelectTestName);
+            ORGANIZATION_NAME);
 
         const okButton =
             await page.$('.modal > div > input[ type="button" ][ value="Ok" ]');
@@ -117,10 +118,9 @@ describe('A created group is immediately selected', () => {
         await createNewGroup?.click();
 
         nameInput = await page.$('[ id="newName" ]');
-        await nameInput?.type(GROUP_NAME);
-    });
 
-    it('A created group is immediately selected', async() => {
+        await nameInput?.type(GROUP_NAME);
+
         const createGroupButton =
             await page.$('.modal > div > input[ type="button" ][ value="Create group" ]');
 
@@ -135,6 +135,84 @@ describe('A created group is immediately selected', () => {
         const closeNewGroup = await page.$('.modal > span');
 
         await closeNewGroup?.click();
+
+        const manageGroup = await page.$('div.groups > div.items > ul > li.selected > button');
+
+        await manageGroup?.click();
+
+        emailInput = await page.$('[ id="newEmail" ]');
+
+        await emailInput?.type(GROUP_USER_EMAIL_ADDRESS);
+
+        const inviteGroupUserButton =
+            await page.$('.modal > div > input[ type="button" ][ value="Invite group user" ]');
+
+        await inviteGroupUserButton?.click();
+
+        await expect(page).toMatch(
+            'Confirmation email sent',
+            {
+                timeout: 30000
+            });
+
+        await page.reload();
+        await page.waitForSelector(
+            '.modal',
+            {
+                hidden: true,
+                timeout: 30000
+            });
+
+        createNewUser = await page.$('button');
+
+        await createNewUser?.click();
+
+        emailInput = await page.$('[ id="newEmail" ]');
+        passwordInput = await page.$('[ id="newPassword" ]');
+        confirmPasswordInput = await page.$('[ id="confirmPassword" ]');
+        password = 'MyT3stP@ss2';
+
+        await emailInput?.type(GROUP_USER_EMAIL_ADDRESS);
+        await passwordInput?.type(password);
+        await confirmPasswordInput?.type(password);
+
+        createUserButton = await page.$(createUserButtonSelector);
+
+        await createUserButton?.click();
+        await page.waitForSelector(
+            createUserButtonSelector,
+            {
+                hidden: true,
+                timeout: 30000
+            });
+    });
+
+    it('Confirming user selects group', async() => {
+        const email = await simpleParser(
+            await waitForEmail(GROUP_USER_EMAIL_ADDRESS));
+
+        if (email.text) {
+            const linkHeader = 'Login with your email address in the original browser to finish group user creation:';
+            const link = email.text
+                .substr(email.text.search(linkHeader) + linkHeader.length)
+                .trim();
+
+            await page.goto(link);
+        }
+
+        await expect(page).toMatch(
+            'User added to group',
+            {
+                timeout: 30000
+            });
+
+        const closeAddedGroup = await page.$('.modal > span');
+
+        await closeAddedGroup?.click();
+
+        const selectedOrganization = await page.$('div.organizations > div.items > ul > li.selected');
+
+        await expect(selectedOrganization).toMatch(ORGANIZATION_NAME);
 
         const selectedGroup = await page.$('div.groups > div.items > ul > li.selected');
 

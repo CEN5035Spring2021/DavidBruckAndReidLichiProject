@@ -25,23 +25,31 @@ export class OrganizationStore extends Store {
     public async update({ lowercasedEmailAddress, organizations } : {
             lowercasedEmailAddress: string;
             organizations: IOrganization[];
-        }): Promise<void> {
+        }): Promise<IGroup[] | undefined> {
+        let addedGroups: IGroup[] | undefined;
         for (const organization of organizations) {
-            await this.appendImpl({
+            const newAddedGroups = await this.appendImpl({
                 lowercasedEmailAddress,
                 organization
             });
+            if (!newAddedGroups) {
+                continue;
+            }
+
+            if (addedGroups) {
+                addedGroups.push(...newAddedGroups);
+                continue;
+            }
+
+            addedGroups = newAddedGroups;
         }
+        return addedGroups;
     }
 
     public async append(organization: IOrganization): Promise<void> {
         await this.appendImpl({
             lowercasedEmailAddress: get(emailAddress).toLowerCase(),
             organization
-        });
-        organizations.update(organizations => {
-            organizations.push(organization.name);
-            return organizations;
         });
     }
 
@@ -118,7 +126,7 @@ export class OrganizationStore extends Store {
     private async appendImpl({ lowercasedEmailAddress, organization } : {
         lowercasedEmailAddress: string;
         organization: IOrganization;
-    }): Promise<void> {
+    }): Promise<IGroup[] | undefined> {
         const nonCompositeKeyOrganization:
             Partial<IOrganization & {
                 lowercasedEmailAddress_name: string;
@@ -142,8 +150,9 @@ export class OrganizationStore extends Store {
         });
 
         let putRequest: IDBRequest<IDBValidKey>;
+        let addedGroups: IGroup[] | undefined;
         if (existingOrganization && existingOrganization.name === organization.name) {
-            updateGroups({
+            addedGroups = updateGroups({
                 organization: existingOrganization,
                 groups: organization.groups
             });
@@ -154,12 +163,22 @@ export class OrganizationStore extends Store {
             putRequest = this._store.put(existingOrganization);
         } else {
             putRequest = this._store.put(nonCompositeKeyOrganization);
+            addedGroups = nonCompositeKeyOrganization.groups;
         }
 
         await new Promise((resolve, reject) => {
             putRequest.onsuccess = resolve;
             putRequest.onerror = () => reject(putRequest.error);
         });
+
+        organizations.update(organizations => {
+            if (organizations.indexOf(organization.name) === NOT_FOUND) {
+                organizations.push(organization.name);
+            }
+            return organizations;
+        });
+
+        return addedGroups;
     }
 }
 function updateOrganizationUsers({ organization, users } : {
@@ -175,14 +194,14 @@ function updateOrganizationUsers({ organization, users } : {
         let requiresReordering: boolean | undefined;
         for (const user of users) {
             const existingUser = existingUsers.get(user.emailAddress.toLowerCase());
-            if (existingUser) {
-                existingUser.encryptionPublicKey = user.encryptionPublicKey;
-            } else if (existingUser.encryptionPublicKey !== user.encryptionPublicKey) {
+            if (!existingUser) {
                 organization.users.push({
                     emailAddress: user.emailAddress,
                     encryptionPublicKey: user.encryptionPublicKey
                 });
                 requiresReordering = true;
+            } else if (existingUser.encryptionPublicKey !== user.encryptionPublicKey) {
+                existingUser.encryptionPublicKey = user.encryptionPublicKey;
             }
         }
         if (requiresReordering) {
@@ -251,13 +270,22 @@ export function runUnderOrganizationStore<TState, TResult>(
 export const switchingOrganization = writable<boolean>(false);
 
 confirmingOrganization.subscribe(value => {
-    unconditionalMessage.update(() => value
+    unconditionalMessage.set(value
         ? {
             message: 'Confirming organization...',
             isInformational: true
         }
         : undefined);
-    showUnconditionalMessage.subscribe(() => value);
+    showUnconditionalMessage.set(value);
+});
+switchingOrganization.subscribe(value => {
+    unconditionalMessage.set(value
+        ? {
+            message: 'Switching organizations...',
+            isInformational: true
+        }
+        : undefined);
+    showUnconditionalMessage.set(value);
 });
 
 selectedOrganization.subscribe(value => {
@@ -273,7 +301,7 @@ selectedOrganization.subscribe(value => {
     }
 });
 selectedGroup.subscribe(value => {
-    if (value && !get(_selectedOrganization).groups?.some(group => group === value)) {
+    if (value && !get(_selectedOrganization)?.groups?.some(group => group === value)) {
         switchingOrganization.set(true);
         runUnderOrganizationStore(store => store.get(get(selectedOrganization)))
             .then(organization => {

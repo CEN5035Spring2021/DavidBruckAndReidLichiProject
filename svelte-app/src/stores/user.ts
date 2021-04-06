@@ -32,6 +32,7 @@ export class UserStore extends Store {
 }
 
 export const emailAddress = writable('');
+export const groupUserConfirmationEmailAddress = writable('');
 export const encryptionPrivateKey = writable<CryptoKey>(null);
 export const encryptionPublicKey = writable<CryptoKey>(null);
 export const signingPrivateKey = writable<CryptoKey>(null);

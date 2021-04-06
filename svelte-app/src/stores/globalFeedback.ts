@@ -1,4 +1,4 @@
-import type { Readable, Writable } from 'svelte/store';
+import type { Readable } from 'svelte/store';
 import { get, readable, writable } from 'svelte/store';
 
 export const globalFeedback = writable<IGlobalFeedback[]>([]);
@@ -27,8 +27,8 @@ export const globalFeedbackLength = readable<number | boolean>(
             globalFeedback: value
         })));
     });
-export function subscribePleaseWait(value: Readable<boolean>, message: string): void {
-    value.subscribe(value => {
+export function subscribePleaseWait(value: Readable<boolean>, message: string): () => void {
+    return value.subscribe(value => {
         unconditionalMessage.update(() =>
             value
                 ? {

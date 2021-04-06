@@ -8,7 +8,7 @@ describe('Creating group user sends email', () => {
     const GROUP_NAME = 'Group - user email test';
     const GROUP_USER_EMAIL_ADDRESS = 'creating-group-user-sends-email2@cen.5035';
 
-    beforeAll(async() => {
+    beforeEach(async() => {
         await page.goto('http://localhost:5000');
         await page.waitForSelector(
             '.modal',
@@ -106,6 +106,12 @@ describe('Creating group user sends email', () => {
         const organization = await page.$('div.organizations > div.items > ul > li');
 
         await organization?.click();
+        await page.waitForSelector(
+            '.modal',
+            {
+                hidden: true,
+                timeout: 30000
+            });
 
         const createNewGroup = await page.$('div.groups > div.items > button');
 

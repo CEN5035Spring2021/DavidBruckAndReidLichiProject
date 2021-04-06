@@ -10,13 +10,26 @@
         }
     };
 
-    $:globalFeedbackFirst = ($unconditionalMessage as IGlobalFeedback | undefined)
+    function initOk(el: HTMLInputElement) {
+        el.focus();
+    }
+
+    $: globalFeedbackFirst = ($unconditionalMessage as IGlobalFeedback | undefined)
         || $globalFeedbackLength
             && ($globalFeedback as IGlobalFeedback[])[0];
-    $:isInformational = globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).isInformational;
-    $:title = (globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).title)
+    $: isInformational = globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).isInformational;
+    $: title = (globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).title)
         || (isInformational ? 'Please wait' : 'An error occurred:');
-    $:message = globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).message;
+    $: message = globalFeedbackFirst && (globalFeedbackFirst as IGlobalFeedback).message;
+
+    const onKeyPress = (e: KeyboardEvent) => {
+        switch (e.key) {
+            case 'Enter':
+            case 'Escape':
+                close();
+                break;
+        }
+    };
 </script>
 
 { #if $globalFeedbackLength }
@@ -32,7 +45,7 @@
                 <br />
                 <br />
             { :else }
-                <input type=button value="Ok" on:click={ close } />
+                <input type=button value="Ok" on:click={ close } use:initOk on:keypress={ onKeyPress } />
             { /if }
         </div>
     </Modal>

@@ -6,7 +6,6 @@ import { validateSignature, getValidatedUser } from '../modules/validateSignatur
 import * as crypto from 'crypto';
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
 import { v4 as uuidV4 } from 'uuid';
-import * as nodemailer from 'nodemailer';
 import {
     getGroupsContainer, getGroupUserConfirmationsContainer, getGroupUsersContainer, getDatabase,
     getOrganizationUsersContainer
@@ -14,6 +13,7 @@ import {
 import type { GroupResponse, OrganizationResponse, UserResponse } from '../modules/populateOrganization';
 import { populateOrganization, populateOrganizationUsers } from '../modules/populateOrganization';
 import { getExistingOrganization, getOrganizationAdmin } from '../modules/populateOrganization';
+import sendMail from '../modules/sendMail';
 
 interface CreateGroupUserRequest extends IUser {
     groupUserEmailAddress?: string;
@@ -34,10 +34,7 @@ enum CreateGroupUserResponseType {
     ConfirmationEmailSent = 'ConfirmationEmailSent'
 }
 
-const EMAIL_INSECURE_PORT = process.env['CEN5035Spring2021bruck010InsecurePort'];
 const EMAIL_FROM = process.env['CEN5035Spring2021bruck010Email'];
-const EMAIL_PASSWORD = process.env['CEN5035Spring2021bruck010Password'];
-const EMAIL_SMTP_SERVER = process.env['CEN5035Spring2021bruck010SmtpServer'];
 const STATIC_SITE = process.env['CEN5035Spring2021StaticSite'];
 
 const httpTrigger: AzureFunction = async function(context: Context, req: HttpRequest): Promise<void> {
@@ -144,7 +141,8 @@ async function handleConfirmation(
         existingOrganizations,
         usersToOrganizations,
         usersToGroups,
-        organizationUsers
+        organizationUsers,
+        limitToOrganization: groupUserConfirmation.organizationId
     });
 
     result({
@@ -219,7 +217,7 @@ async function handleNonConfirmation(
     if (!user || !(await checkExistingOrganizationUser({
         organizationUsers: await getOrganizationUsersContainer(database),
         organizationId: organization.id,
-        userId
+        userId: user.id
     }))) {
         return createGroupUserConfirmation({
             context,
@@ -459,53 +457,37 @@ async function createGroupUserConfirmation(
         lowercasedEmailAddress: emailAddress.toLowerCase()
     };
 
-    await nodemailer
-        .createTransport(
-            EMAIL_INSECURE_PORT
-                ? {
-                    host: EMAIL_SMTP_SERVER,
-                    port: Number(EMAIL_INSECURE_PORT),
-                    secure: false,
-                    ignoreTLS: true,
-                    auth: {
-                        user: EMAIL_FROM,
-                        pass: EMAIL_PASSWORD
-                    }
-                }
-                : `smtps://${encodeURIComponent(EMAIL_FROM)}:${encodeURIComponent(EMAIL_PASSWORD)}` +
-                    `@${EMAIL_SMTP_SERVER}`)
-        .sendMail(
-            {
-                from: EMAIL_FROM,
-                to: emailAddress,
-                subject: `Finish group user creation: ${organization.name}\\${group.name}`,
-                text: 'Login with your email address in the original browser to finish group user creation:\n' +
-                    `${STATIC_SITE}#emailAddress=${encodeURIComponent(emailAddress)}` +
-                    `&groupUserConfirmation=${newGroupUserConfirmation.id}`,
-                html: '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" ' +
-                    '"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\r\n' +
-                    '<html xmlns="http://www.w3.org/1999/xhtml">\r\n' +
-                    '	<head>\r\n' +
-                    '		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />\r\n' +
-                    '		<meta name="viewport" content="width=device-width, initial-scale=1.0" />\r\n' +
-                    `		<title>Finish group user creation: ${organization.name}\\${group.name}</title>\r\n` +
-                    '		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />\r\n' +
-                    '	</head>\r\n' +
-                    '	<body>\r\n' +
-                    '		<h1>Login with your email address in the original browser to finish group user ' +
-                    'creation:</h1>\r\n' +
-                    `		<a href="${STATIC_SITE}#emailAddress=${encodeURIComponent(emailAddress)}` +
-                    `&groupUserConfirmation=${newGroupUserConfirmation.id}">` +
-                    `${STATIC_SITE}#emailAddress=${encodeURIComponent(emailAddress)}` +
-                    `&groupUserConfirmation=${newGroupUserConfirmation.id}</a>\r\n` +
-                    '	</body>\r\n' +
-                    '</html>\r\n',
-                textEncoding: 'quoted-printable'
-            });
-
     const groupUserConfirmations = await getGroupUserConfirmationsContainer(database);
 
     await groupUserConfirmations.container.items.create(newGroupUserConfirmation);
+
+    await sendMail({
+        from: EMAIL_FROM,
+        to: emailAddress,
+        subject: `Finish group user creation: ${organization.name}\\${group.name}`,
+        text: 'Login with your email address in the original browser to finish group user creation:\n' +
+            `${STATIC_SITE}#emailAddress=${encodeURIComponent(emailAddress)}` +
+            `&groupUserConfirmation=${newGroupUserConfirmation.id}`,
+        html: '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" ' +
+            '"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\r\n' +
+            '<html xmlns="http://www.w3.org/1999/xhtml">\r\n' +
+            '	<head>\r\n' +
+            '		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />\r\n' +
+            '		<meta name="viewport" content="width=device-width, initial-scale=1.0" />\r\n' +
+            `		<title>Finish group user creation: ${organization.name}\\${group.name}</title>\r\n` +
+            '		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />\r\n' +
+            '	</head>\r\n' +
+            '	<body>\r\n' +
+            '		<h1>Login with your email address in the original browser to finish group user ' +
+            'creation:</h1>\r\n' +
+            `		<a href="${STATIC_SITE}#emailAddress=${encodeURIComponent(emailAddress)}` +
+            `&groupUserConfirmation=${newGroupUserConfirmation.id}">` +
+            `${STATIC_SITE}#emailAddress=${encodeURIComponent(emailAddress)}` +
+            `&groupUserConfirmation=${newGroupUserConfirmation.id}</a>\r\n` +
+            '	</body>\r\n' +
+            '</html>\r\n',
+        textEncoding: 'quoted-printable'
+    });
 
     result({
         context,
