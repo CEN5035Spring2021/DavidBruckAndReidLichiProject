@@ -1,5 +1,5 @@
 <script lang=ts>
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import Modal from './Modal.svelte';
     import type { IOrganizationUser } from '../stores/user';
     import { emailAddress } from '../stores/user';
@@ -92,7 +92,7 @@
             const crypt = new OpenCrypto();
             const POST = 'POST';
             const url = `${getDefaultFunctionsUrl()}api/creategroupuser`;
-            const createGroupRequest = await sign<CreateGroupUserRequest>({
+            const createGroupUserRequest = await sign<CreateGroupUserRequest>({
                 url,
                 method: POST,
                 body: {
@@ -107,7 +107,7 @@
             const response = await api<CreateGroupUserResponse>({
                 method: POST,
                 url,
-                body: createGroupRequest
+                body: createGroupUserRequest
             });
             switch (response.type) {
                 case CreateGroupUserResponseType.Created: {
@@ -143,7 +143,8 @@
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createGroupUser();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
 
-    subscribePleaseWait(creatingGroupUser, 'Creating group user...');
+    const pleaseWaitSubscription = subscribePleaseWait(creatingGroupUser, 'Creating group user...');
+    onDestroy(pleaseWaitSubscription);
 </script>
 
 <Modal { close }>
@@ -184,9 +185,11 @@
 
     input {
         width: 100%;
-        background-color: #fff;
-        color: #333;
     }
+        input:not(:disabled) {
+            background-color: #fff;
+            color: #333;
+        }
 
     input[ type=button ] {
         cursor: pointer;

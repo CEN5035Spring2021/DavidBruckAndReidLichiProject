@@ -45,9 +45,12 @@ export interface GroupResponse {
     users?: string[];
 }
 export interface CreateGroupUserRequest {
-    groupUserEmailAddress: string;
-    organizationName: string;
-    groupName: string;
+    groupUserEmailAddress?: string;
+    organizationName?: string;
+    groupName?: string;
+    confirmation?: string;
+    encryptionKey?: string;
+    signingKey?: string;
     emailAddress: string;
 }
 export interface CreateGroupUserResponse {

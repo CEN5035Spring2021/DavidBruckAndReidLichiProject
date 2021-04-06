@@ -5,7 +5,7 @@ import { waitForEmail } from '../modules/smtpCoordinator';
 describe('Cannot create organization with existing name', () => {
     const EMAIL_ADDRESS = 'cannot-create-organization-with-existing-name@cen.5035';
 
-    beforeAll(async() => {
+    beforeEach(async() => {
         await page.goto('http://localhost:5000');
         await page.waitForSelector(
             '.modal',

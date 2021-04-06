@@ -21,6 +21,6 @@ export default async function sendMail(mailOptions: Mail.Options) : Promise<void
                 }
                 : `smtps://${encodeURIComponent(typeof FROM_ADDRESS === 'undefined' ? '' : FROM_ADDRESS)}` +
                 `:${encodeURIComponent(typeof SMTP_PASSWORD === 'undefined' ? '' : SMTP_PASSWORD)}` +
-                `@${typeof SMTP_SERVER === 'undefined' ? '' : SMTP_SERVER}?secure=false`)
+                `@${typeof SMTP_SERVER === 'undefined' ? '' : SMTP_SERVER}`)
         .sendMail(mailOptions);
 }

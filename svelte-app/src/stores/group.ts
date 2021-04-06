@@ -97,14 +97,14 @@ export function updateGroupUsers({ group, users } : {
         let requiresReordering: boolean | undefined;
         for (const user of users) {
             const existingUser = existingUsers.get(user.emailAddress.toLowerCase());
-            if (existingUser) {
-                existingUser.encryptionPublicKey = user.encryptionPublicKey;
-            } else if (existingUser.encryptionPublicKey !== user.encryptionPublicKey) {
+            if (!existingUser) {
                 group.users.push({
                     emailAddress: user.emailAddress,
                     encryptionPublicKey: user.encryptionPublicKey
                 });
                 requiresReordering = true;
+            } else if (existingUser.encryptionPublicKey !== user.encryptionPublicKey) {
+                existingUser.encryptionPublicKey = user.encryptionPublicKey;
             }
         }
         if (requiresReordering) {
@@ -156,32 +156,36 @@ export function runUnderGroupStore<TState, TResult>(
 export function updateGroups({ organization, groups } : {
         organization: IHasGroups;
         groups?: IGroup[];
-    }): void {
+    }): IGroup[] | undefined {
     if (!groups) {
         return;
     }
-    if (organization.groups) {
-        const existingGroups = new Map(organization.groups.map(group => [ group.name, group ]));
-        let requiresReordering: boolean | undefined;
-        for (const group of groups) {
-            const existingGroup = existingGroups.get(group.name);
-            if (existingGroup) {
-                updateGroupUsers({
-                    group: existingGroup,
-                    users: group.users
-                });
-            } else {
-                requiresReordering = true;
-                organization.groups.push(group);
-            }
-        }
-        if (requiresReordering) {
-            organization.groups.sort(
-                (a, b) => a.name === b.name
-                    ? EQUALS
-                    : (a.name > b.name ? GREATER : LESS));
-        }
-    } else {
+    if (!organization.groups) {
         organization.groups = groups;
+        return groups;
     }
+
+    const existingGroups = new Map(organization.groups.map(group => [ group.name, group ]));
+    let requiresReordering: boolean | undefined;
+    const addedGroups: IGroup[] = [];
+    for (const group of groups) {
+        const existingGroup = existingGroups.get(group.name);
+        if (existingGroup) {
+            updateGroupUsers({
+                group: existingGroup,
+                users: group.users
+            });
+        } else {
+            requiresReordering = true;
+            organization.groups.push(group);
+            addedGroups.push(group);
+        }
+    }
+    if (requiresReordering) {
+        organization.groups.sort(
+            (a, b) => a.name === b.name
+                ? EQUALS
+                : (a.name > b.name ? GREATER : LESS));
+    }
+    return addedGroups;
 }

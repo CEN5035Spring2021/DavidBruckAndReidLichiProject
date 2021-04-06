@@ -1,5 +1,5 @@
 <script lang=ts>
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import Modal from './Modal.svelte';
     import { emailAddress, encryptionPublicKey, signingPublicKey } from '../stores/user';
     import { sign } from '../modules/sign';
@@ -90,7 +90,8 @@
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createOrganization();
     const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
 
-    subscribePleaseWait(creatingOrganization, 'Creating organization...');
+    const pleaseWaitSubscription = subscribePleaseWait(creatingOrganization, 'Creating organization...');
+    onDestroy(pleaseWaitSubscription);
 </script>
 
 <Modal { close }>
@@ -119,9 +120,11 @@
 
     input {
         width: 100%;
-        background-color: #fff;
-        color: #333;
     }
+        input:not(:disabled) {
+            background-color: #fff;
+            color: #333;
+        }
 
     input[ type=button ] {
         cursor: pointer;

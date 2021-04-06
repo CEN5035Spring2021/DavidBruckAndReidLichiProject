@@ -5,7 +5,7 @@ import { waitForEmail } from '../modules/smtpCoordinator';
 describe('Creating organization sends email', () => {
     const EMAIL_ADDRESS = 'creating-organization-sends-email@cen.5035';
 
-    beforeAll(async() => {
+    beforeEach(async() => {
         await page.goto('http://localhost:5000');
         await page.waitForSelector(
             '.modal',

@@ -1,7 +1,7 @@
 import 'expect-puppeteer';
 
 describe('Login with existing user', () => {
-    beforeAll(async() => {
+    beforeEach(async() => {
         await page.goto('http://localhost:5000');
         await page.waitForSelector(
             '.modal',

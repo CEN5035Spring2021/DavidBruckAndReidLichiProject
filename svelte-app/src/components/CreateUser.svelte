@@ -1,7 +1,8 @@
 <script lang=ts>
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import {
-        emailAddress, encryptionPrivateKey, encryptionPublicKey, signingPrivateKey, signingPublicKey, runUnderUserStore
+        emailAddress, encryptionPrivateKey, encryptionPublicKey, signingPrivateKey, signingPublicKey, runUnderUserStore,
+        groupUserConfirmationEmailAddress
     } from '../stores/user';
     import type { UserStore, IUser } from '../stores/user';
     import Modal from './Modal.svelte';
@@ -10,6 +11,8 @@
     import htmlEscapeWithNewLineBreaks from '../modules/htmlEscapeWithNewlineBreaks';
     import { subscribePleaseWait } from '../stores/globalFeedback';
     import { emailAddressMatch } from '../modules/emailAddressMatch';
+    import getHashValue from '../modules/getHashValue';
+    import onHashChanged from '../modules/onHashChanged';
 
     export let close: () => void;
     export let creatingUser: Writable<boolean>;
@@ -26,6 +29,15 @@
     let passwordInvalid: boolean;
     let confirmPassword: string;
     let confirmPasswordInvalid: boolean;
+
+    const groupUserConfirmationEmailAddressSubscription =
+        groupUserConfirmationEmailAddress.subscribe(value => {
+            if (!value || $creatingUser) {
+                return;
+            }
+
+            localEmailAddress = $groupUserConfirmationEmailAddress as string;
+        });
 
     onMount(() => emailInput.focus());
 
@@ -129,6 +141,17 @@
             }
 
             $emailAddress = localEmailAddress;
+
+            if (!getHashValue('organizationConfirmation')) {
+                // Hash hasn't changed, but this is the earliest we can process it
+                await onHashChanged({
+                    crypt,
+                    tempEncryptionPublicKey: encryptionKeyPair.publicKey,
+                    tempSigningPublicKey: signingKeyPair.publicKey,
+                    tempSigningPrivateKey: signingKeyPair.privateKey
+                });
+            }
+
             $encryptionPrivateKey = encryptionKeyPair.privateKey;
             $encryptionPublicKey = encryptionKeyPair.publicKey;
             $signingPrivateKey = signingKeyPair.privateKey;
@@ -138,6 +161,10 @@
             throw (e);
         } finally {
             $creatingUser = false;
+
+            if ($groupUserConfirmationEmailAddress) {
+                localEmailAddress = $groupUserConfirmationEmailAddress as string;
+            }
         }
     };
     const safeCreateUser = () => createUser().catch(console.error);
@@ -177,7 +204,11 @@
             && existingUser.encryptedSigningKey;
     }
 
-    subscribePleaseWait(creatingUser, 'Creating user...');
+    const pleaseWaitSubscription = subscribePleaseWait(creatingUser, 'Creating user...');
+    onDestroy(() => {
+        groupUserConfirmationEmailAddressSubscription();
+        pleaseWaitSubscription();
+    });
 
     $: safeFeedback = htmlEscapeWithNewLineBreaks(feedback);
 </script>
@@ -187,7 +218,8 @@
     <div slot=content>
         <label for=newEmail>Email:</label>
         <input type=email id=newEmail bind:value={ localEmailAddress } on:keypress={ safeOnKeyPress }
-               class:invalid={ emailAddressInvalid } disabled={ $creatingUser } bind:this={ emailInput } />
+               class:invalid={ emailAddressInvalid } disabled={ $creatingUser || !!$groupUserConfirmationEmailAddress }
+               bind:this={ emailInput } />
         <br />
         <label for=newPassword>Password:</label>
         <input type=password id=newPassword bind:value={ password } on:keypress={ safeOnKeyPress }
@@ -214,9 +246,11 @@
 
     input {
         width: 100%;
-        background-color: #fff;
-        color: #333;
     }
+        input:not(:disabled) {
+            background-color: #fff;
+            color: #333;
+        }
 
     input[ type=button ] {
         cursor: pointer;

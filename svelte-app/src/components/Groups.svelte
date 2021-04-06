@@ -1,7 +1,9 @@
 <script lang=ts>
     import { writable } from 'svelte/store';
 
-    import { organizationGroups, selectedOrganization, switchingOrganization } from '../stores/organization';
+    import {
+        isOrganizationAdmin, organizationGroups, selectedOrganization, switchingOrganization
+    } from '../stores/organization';
     import CreateGroup from './CreateGroup.svelte';
     import Group from './Group.svelte';
 
@@ -28,8 +30,9 @@
                     <Group { group } />
                 { /each }
             </ul>
-            <button on:click={ createGroup }>Create new group</button>
-            <br />
+            { #if $isOrganizationAdmin }
+                <button on:click={ createGroup }>Create new group</button>
+            { /if }
         { :else }
             <h3>Select an organization</h3>
         { /if }
