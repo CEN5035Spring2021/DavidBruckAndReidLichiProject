@@ -25,44 +25,21 @@ export default async(globalConfig: Config) : Promise<void> => {
         started: false
     };
     const servers: JestDevServerOptions[] = [];
-    const utcDate = new Date().toUTCString();
-    const cosmosDBAuthorizationHeaders = {
-        'x-ms-date': utcDate,
-        'x-ms-version': '2018-12-31',
-        Authorization: encodeURIComponent(
-            'type=master&ver=1.0&sig=' +
-            crypto
-                .createHmac(
-                    'sha256',
-                    Buffer.from(
-                        'C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==',
-                        'base64'))
-                .update(Buffer.from(
-                    `head\n\n\n${utcDate.toLowerCase()}\n\n`))
-                .digest('base64'))
-    };
-    const signalRAuthorizationHeader = {
-        Authorization: 'Bearer ' +
-            jwt.sign(
-                {
-                    aud: 'http://localhost:8088/api/v1/health'
-                },
-                'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGH')
-    };
 
     const localAppData = process.env['LOCALAPPDATA'];
     const isCI = typeof ci === 'undefined' ? '' : ci === 'true';
-    const startSignalR: JestDevServerOptions = {
-        command: 'asrs-emulator start -p 8088',
-        protocol: 'http',
-        port: 8088,
-        launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
-        serversStarted,
-        waitOnScheme: {
-            headers: signalRAuthorizationHeader
-        },
-        path: '/api/v1/health'
-    };
+
+    const localSettingsJson = path.join(
+        // We are in <Git_root>/svelte-app-tests/config/global-setup.ts,
+        // need to resolve to <Git_root>/azure-functions/local.settings.json(.sample)
+        path.resolve(__dirname, '..', '..'),
+        'azure-functions',
+        'local.settings.json');
+    if (!fs.existsSync(localSettingsJson)
+        && fs.existsSync(`${localSettingsJson}.sample`)) {
+        fs.copyFileSync(`${localSettingsJson}.sample`, localSettingsJson);
+    }
+
     if (isCI) {
         cosmosDBTempPath = path.join(
             typeof localAppData === 'undefined' ? '' : localAppData,
@@ -100,11 +77,11 @@ export default async(globalConfig: Config) : Promise<void> => {
                 launchTimeout: 60000, // 60 seconds
                 waitOnScheme: {
                     strictSSL: false,
-                    headers: cosmosDBAuthorizationHeaders
+                    headers: getCosmosDBAuthorizationHeaders()
                 },
                 serversStarted
             },
-            startSignalR);
+            getSignalRServer(serversStarted, isCI));
     } else {
         const signalRExists = await runCommandAsync(
             'asrs-emulator',
@@ -115,7 +92,7 @@ export default async(globalConfig: Config) : Promise<void> => {
             });
 
         if (signalRExists) {
-            servers.push(startSignalR);
+            servers.push(getSignalRServer(serversStarted, isCI));
         } else {
             servers.push({
                 command: 'echo Install dotnet tool Microsoft.Azure.SignalR.Emulator.&&' +
@@ -127,7 +104,7 @@ export default async(globalConfig: Config) : Promise<void> => {
                 usedPortAction: 'ignore',
                 waitOnScheme: {
                     strictSSL: false,
-                    headers: cosmosDBAuthorizationHeaders
+                    headers: getCosmosDBAuthorizationHeaders()
                 },
                 serversStarted
             });
@@ -152,7 +129,7 @@ export default async(globalConfig: Config) : Promise<void> => {
             usedPortAction: 'ignore',
             waitOnScheme: {
                 strictSSL: false,
-                headers: cosmosDBAuthorizationHeaders
+                headers: getCosmosDBAuthorizationHeaders()
             },
             serversStarted
         });
@@ -237,3 +214,49 @@ export default async(globalConfig: Config) : Promise<void> => {
 
     return (await setupPuppeteer).setup(globalConfig);
 };
+
+function getCosmosDBAuthorizationHeaders() {
+    const utcDate = new Date().toUTCString();
+    return {
+        'x-ms-date': utcDate,
+        'x-ms-version': '2018-12-31',
+        Authorization: encodeURIComponent(
+            'type=master&ver=1.0&sig=' +
+            crypto
+                .createHmac(
+                    'sha256',
+                    Buffer.from(
+                        'C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==',
+                        'base64'))
+                .update(Buffer.from(
+                    `head\n\n\n${utcDate.toLowerCase()}\n\n`))
+                .digest('base64'))
+    };
+}
+function getSignalRServer(
+    serversStarted: {
+        started: boolean;
+    },
+    isCI: boolean | ''): JestDevServerOptions {
+    return {
+        command: 'asrs-emulator start -p 8088',
+        protocol: 'http',
+        port: 8088,
+        launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
+        serversStarted,
+        waitOnScheme: {
+            headers: getSignalRAuthorizationHeader()
+        },
+        path: '/api/v1/health'
+    };
+}
+function getSignalRAuthorizationHeader() {
+    return {
+        Authorization: 'Bearer ' +
+            jwt.sign(
+                {
+                    aud: 'http://localhost:8088/api/v1/health'
+                },
+                'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGH')
+    };
+}

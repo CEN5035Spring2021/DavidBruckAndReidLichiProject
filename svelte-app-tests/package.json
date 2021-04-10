@@ -34,7 +34,6 @@
   "scripts": {
     "postinstall": "patch-package",
     "test": "cross-env HEADLESS=true CEN5035Spring2021DavidBruckProjectCosmosDBURI=https://localhost:8081 CEN5035Spring2021DavidBruckProjectCosmosDBKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== CEN5035Spring2021bruck010InsecurePort=5051 CEN5035Spring2021bruck010Email=tester@localhost CEN5035Spring2021bruck010Password=password CEN5035Spring2021bruck010SmtpServer=localhost CEN5035Spring2021Database=CEN5035Spring2021DavidBruckTests jest test",
-    "test-slow": "cross-env HEADLESS=true CEN5035Spring2021DavidBruckProjectCosmosDBURI=https://localhost:8081 CEN5035Spring2021DavidBruckProjectCosmosDBKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw== CEN5035Spring2021bruck010InsecurePort=5051 CEN5035Spring2021bruck010Email=tester@localhost CEN5035Spring2021bruck010Password=password CEN5035Spring2021bruck010SmtpServer=localhost CEN5035Spring2021Database=CEN5035Spring2021DavidBruckTests jest test --maxConcurrency=4",
     "tsc": "tsc",
     "lint": "eslint */**/*.{js,json,ts} --fix --max-warnings 0",
     "lint-nofix": "eslint */**/*.{js,json,ts} --max-warnings 0"

@@ -57,6 +57,6 @@ jobs:
 
     - name: Test svelte-app and azure-functions
       working-directory: ./svelte-app-tests
-      run: npm run test-slow
+      run: npm test
     env:
       CI: true
