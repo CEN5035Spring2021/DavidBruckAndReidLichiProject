@@ -12,7 +12,7 @@ import * as chalk from 'chalk';
 import { onEmailReceived } from '../modules/smtpHandlers';
 import { startSMTPServer } from '../../dev-smtp-server/modules/smtpServer';
 import { startSMTPCoordinator } from '../modules/smtpCoordinator';
-import * as jwt from 'jsonwebtoken';
+// Z import * as jwt from 'jsonwebtoken';
 
 type Config = { [key: string]: string | undefined }
 const setupPuppeteer =
@@ -41,28 +41,28 @@ export default async(globalConfig: Config) : Promise<void> => {
                     `head\n\n\n${utcDate.toLowerCase()}\n\n`))
                 .digest('base64'))
     };
-    const signalRAuthorizationHeader = {
-        Authorization: 'Bearer ' +
-            jwt.sign(
-                {
-                    aud: 'http://localhost:8088/api/v1/health'
-                },
-                'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGH')
-    };
+    // Z const signalRAuthorizationHeader = {
+    //     Authorization: 'Bearer ' +
+    //         jwt.sign(
+    //             {
+    //                 aud: 'http://localhost:8088/api/v1/health'
+    //             },
+    //             'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGH')
+    // };
 
     const localAppData = process.env['LOCALAPPDATA'];
     const isCI = typeof ci === 'undefined' ? '' : ci === 'true';
-    const startSignalR: JestDevServerOptions = {
-        command: 'asrs-emulator start -p 8088',
-        protocol: 'http',
-        port: 8088,
-        launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
-        serversStarted,
-        waitOnScheme: {
-            headers: signalRAuthorizationHeader
-        },
-        path: '/api/v1/health'
-    };
+    // Z const startSignalR: JestDevServerOptions = {
+    //     command: 'asrs-emulator start -p 8088',
+    //     protocol: 'http',
+    //     port: 8088,
+    //     launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
+    //     serversStarted,
+    //     waitOnScheme: {
+    //         headers: signalRAuthorizationHeader
+    //     },
+    //     path: '/api/v1/health'
+    // };
     if (isCI) {
         cosmosDBTempPath = path.join(
             typeof localAppData === 'undefined' ? '' : localAppData,
@@ -103,8 +103,7 @@ export default async(globalConfig: Config) : Promise<void> => {
                     headers: cosmosDBAuthorizationHeaders
                 },
                 serversStarted
-            },
-            startSignalR);
+            });
     } else {
         const signalRExists = await runCommandAsync(
             'asrs-emulator',
@@ -115,7 +114,7 @@ export default async(globalConfig: Config) : Promise<void> => {
             });
 
         if (signalRExists) {
-            servers.push(startSignalR);
+            // Z servers.push(startSignalR);
         } else {
             servers.push({
                 command: 'echo Install dotnet tool Microsoft.Azure.SignalR.Emulator.&&' +
