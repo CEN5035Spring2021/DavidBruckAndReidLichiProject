@@ -2,10 +2,11 @@ const READY = 4; // XHR Ready
 const OK = 200; // HTTP status
 
 export function api<T>(
-    { method, url, body } : {
+    { method, url, body, xMsClientPrincipalName } : {
         method: string;
         url: string;
-        body: unknown;
+        body?: unknown;
+        xMsClientPrincipalName?: string;
     }) : Promise<T> {
     const MAX_RETRIES = 5;
     const BASE_DELAY_MILLISECONDS = 100;
@@ -37,7 +38,10 @@ export function api<T>(
                         }
                     };
                     xhr.open(method, url);
-                    xhr.send(JSON.stringify(body));
+                    if (xMsClientPrincipalName) {
+                        xhr.setRequestHeader('x-ms-client-principal-name', xMsClientPrincipalName);
+                    }
+                    xhr.send(body && JSON.stringify(body));
                 });
 
         if (status === OK) {

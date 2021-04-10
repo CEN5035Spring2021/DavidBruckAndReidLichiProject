@@ -89,20 +89,39 @@ export class OrganizationStore extends Store {
         }
     }
 
-    public async appendGroupUser({ user } : {
+    public async appendGroupUser({ user, organization, group } : {
         user: IOrganizationUser;
+        organization?: string;
+        group?: string;
     }): Promise<void> {
-        const existingOrganization = get(_selectedOrganization);
+        const tempSelectedOrganization = get(_selectedOrganization);
+        const existingOrganization = organization && tempSelectedOrganization.name !== organization
+            ? await this.get(organization)
+            : tempSelectedOrganization;
 
+        const groupName = group || get(selectedGroup)?.name;
         const existingGroup = existingOrganization.groups?.find(
-            existingGroup => existingGroup.name === get(selectedGroup)?.name);
+            existingGroup => existingGroup.name === groupName);
 
-        if (!existingGroup) {
-            throw new Error('Could not find selected organization group by name');
+        let ensuredGroup: IGroup;
+        if (existingGroup) {
+            ensuredGroup = existingGroup;
+        } else {
+            if (!group) {
+                throw new Error('Could not find selected organization group by name');
+            }
+            ensuredGroup = {
+                name: group,
+                users: []
+            };
+            updateGroups({
+                organization: existingOrganization,
+                groups: [ ensuredGroup ]
+            });
         }
 
         const fireGroupUsersUpdate = updateGroupUsers({
-            group: existingGroup,
+            group: ensuredGroup,
             users: [ user ]
         });
 
@@ -117,10 +136,18 @@ export class OrganizationStore extends Store {
             putRequest.onerror = () => reject(putRequest.error);
         });
 
-        for (const organizationUsersUpdateListener of organizationUsersUpdateListeners) {
-            organizationUsersUpdateListener();
+        if (!organization || organization === get(selectedOrganization)) {
+            if (!existingGroup) {
+                for (const organizationGroupsUpdateListener of organizationGroupsUpdateListeners) {
+                    organizationGroupsUpdateListener();
+                }
+            }
+
+            for (const organizationUsersUpdateListener of organizationUsersUpdateListeners) {
+                organizationUsersUpdateListener();
+            }
+            fireGroupUsersUpdate();
         }
-        fireGroupUsersUpdate();
     }
 
     private async appendImpl({ lowercasedEmailAddress, organization } : {

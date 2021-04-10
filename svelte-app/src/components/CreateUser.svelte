@@ -9,10 +9,11 @@
     import OpenCrypto from 'opencrypto';
     import type { Writable } from 'svelte/store';
     import htmlEscapeWithNewLineBreaks from '../modules/htmlEscapeWithNewlineBreaks';
-    import { subscribePleaseWait } from '../stores/globalFeedback';
+    import { globalFeedback, subscribePleaseWait } from '../stores/globalFeedback';
     import { emailAddressMatch } from '../modules/emailAddressMatch';
     import getHashValue from '../modules/getHashValue';
     import onHashChanged from '../modules/onHashChanged';
+    import { connectSignalR } from '../modules/signalR';
 
     export let close: () => void;
     export let creatingUser: Writable<boolean>;
@@ -152,6 +153,8 @@
                 });
             }
 
+            await connectSignalR(localEmailAddress);
+
             $encryptionPrivateKey = encryptionKeyPair.privateKey;
             $encryptionPublicKey = encryptionKeyPair.publicKey;
             $signingPrivateKey = signingKeyPair.privateKey;
@@ -167,10 +170,24 @@
             }
         }
     };
-    const safeCreateUser = () => createUser().catch(console.error);
+    const safeCreateUser = () => createUser().catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeCreateUser: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createUser();
-    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
+    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeOnKeyPress: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     async function createUserImplementation(
         userStore: UserStore,

@@ -9,12 +9,14 @@
     import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
     import { selectedOrganization } from '../stores/organization';
     import type { Writable } from 'svelte/store';
-    import { subscribePleaseWait } from '../stores/globalFeedback';
+    import { globalFeedback, subscribePleaseWait } from '../stores/globalFeedback';
     import { api } from '../modules/api';
     import { runUnderGroupStore, selectedGroup } from '../stores/group';
 
     export let close: () => void;
     export let creatingGroup: Writable<boolean>;
+
+    const POST = 'POST';
 
     let nameInput: HTMLInputElement;
     let feedback: string;
@@ -36,7 +38,6 @@
         $creatingGroup = true;
         try {
             const crypt = new OpenCrypto();
-            const POST = 'POST';
             const url = `${getDefaultFunctionsUrl()}api/creategroup`;
             const createGroupRequest = await sign<CreateGroupRequest>({
                 url,
@@ -81,10 +82,24 @@
             $creatingGroup = false;
         }
     };
-    const safeCreateGroup: () => void = () => createGroup().catch(console.error);
+    const safeCreateGroup: () => void = () => createGroup().catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeCreateGroup: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createGroup();
-    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
+    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeOnKeyPress: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     const pleaseWaitSubscription = subscribePleaseWait(creatingGroup, 'Creating group...');
     onDestroy(pleaseWaitSubscription);

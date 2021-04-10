@@ -1,8 +1,8 @@
 diff --git a/node_modules/@types/jest-dev-server/index.d.ts b/node_modules/@types/jest-dev-server/index.d.ts
-index ede5f46..a98c59c 100644
+index ede5f46..49536fc 100644
 --- a/node_modules/@types/jest-dev-server/index.d.ts
 +++ b/node_modules/@types/jest-dev-server/index.d.ts
-@@ -118,6 +118,10 @@ export interface JestDevServerOptions {
+@@ -118,6 +118,12 @@ export interface JestDevServerOptions {
       * }
       */
      waitOnScheme?: Partial<WaitOnOptions>;
@@ -10,10 +10,12 @@ index ede5f46..a98c59c 100644
 +    serversStarted: {
 +        started: boolean
 +    };
++
++    path?: string;
  }
  
  export const ERROR_TIMEOUT: 'ERROR_TIMEOUT';
-@@ -125,7 +129,7 @@ export const ERROR_PORT_USED: 'ERROR_PORT_USED';
+@@ -125,7 +131,7 @@ export const ERROR_PORT_USED: 'ERROR_PORT_USED';
  export const ERROR_NO_COMMAND: 'ERROR_NO_COMMAND';
  
  export function setup(

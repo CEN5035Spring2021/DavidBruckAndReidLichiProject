@@ -14,11 +14,14 @@
     import { runUnderOrganizationStore } from '../stores/organization';
     import type { IOrganization } from '../stores/organization';
     import onHashChanged from '../modules/onHashChanged';
-    import { subscribePleaseWait } from '../stores/globalFeedback';
+    import { globalFeedback, subscribePleaseWait } from '../stores/globalFeedback';
     import { api } from '../modules/api';
+    import { connectSignalR } from '../modules/signalR';
 
     let clazz: string;
     export { clazz as class };
+
+    const POST = 'POST';
 
     let emailInput: HTMLInputElement;
     let feedback: string;
@@ -142,7 +145,6 @@
                     tempSigningPrivateKey
                 });
 
-                const POST = 'POST';
                 const url = `${getDefaultFunctionsUrl()}api/getorganizations`;
                 const organizationsRequest = await sign<OrganizationsRequest>({
                     url,
@@ -230,6 +232,9 @@
                 }
 
                 $emailAddress = existingUser.emailAddress; // In case the email address had different casing
+
+                await connectSignalR(existingUser.emailAddress);
+
                 $encryptionPrivateKey = tempEncryptionPrivateKey;
                 $encryptionPublicKey = tempEncryptionPublicKey;
                 $signingPrivateKey = tempSigningPrivateKey;
@@ -246,7 +251,14 @@
             }
         }
     };
-    const safeLogin = () => login().catch(console.error);
+    const safeLogin = () => login().catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeLogin: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     async function loginImplementation(userStore: UserStore, lowercasedEmailAddress: string): Promise<IUser> {
         const existingUser = await userStore.getUser(lowercasedEmailAddress);
@@ -263,7 +275,14 @@
     }
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await login();
-    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
+    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeOnKeyPress: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
     const createUser = () => !$loggingIn && (createUserModalOpen = true);
     const closeUserCreation = () => $creatingUser as boolean || (createUserModalOpen = false);
 

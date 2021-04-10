@@ -12,6 +12,7 @@ import * as chalk from 'chalk';
 import { onEmailReceived } from '../modules/smtpHandlers';
 import { startSMTPServer } from '../../dev-smtp-server/modules/smtpServer';
 import { startSMTPCoordinator } from '../modules/smtpCoordinator';
+import * as jwt from 'jsonwebtoken';
 
 type Config = { [key: string]: string | undefined }
 const setupPuppeteer =
@@ -40,9 +41,28 @@ export default async(globalConfig: Config) : Promise<void> => {
                     `head\n\n\n${utcDate.toLowerCase()}\n\n`))
                 .digest('base64'))
     };
+    const signalRAuthorizationHeader = {
+        Authorization: 'Bearer ' +
+            jwt.sign(
+                {
+                    aud: 'http://localhost:8088/api/v1/health'
+                },
+                'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGH')
+    };
 
     const localAppData = process.env['LOCALAPPDATA'];
     const isCI = typeof ci === 'undefined' ? '' : ci === 'true';
+    const startSignalR: JestDevServerOptions = {
+        command: 'asrs-emulator start -p 8088',
+        protocol: 'http',
+        port: 8088,
+        launchTimeout: 30000 + (isCI ? 60000 : 0), // 30 seconds (plus more for GitHub Actions)
+        serversStarted,
+        waitOnScheme: {
+            headers: signalRAuthorizationHeader
+        },
+        path: '/api/v1/health'
+    };
     if (isCI) {
         cosmosDBTempPath = path.join(
             typeof localAppData === 'undefined' ? '' : localAppData,
@@ -68,22 +88,51 @@ export default async(globalConfig: Config) : Promise<void> => {
                 });
         }
 
-        servers.push({
-            command: 'powershell docker run --name azure-cosmosdb-emulator --rm --memory 2GB -v ' +
-                `${cosmosDBTempPath}:C:\\CosmosDB.Emulator\\bind-mount ` +
-                '-p 8081:8081 -p 8900:8900 -p 8901:8901 -p 8902:8902 -p 10250:10250 -p 10251:10251 ' +
-                '-p 10252:10252 -p 10253:10253 -p 10254:10254 -p 10255:10255 -p 10256:10256 -p 10350:10350 ' +
-                '-i mcr.microsoft.com/cosmosdb/winsrv2019/azure-cosmos-emulator',
-            protocol: 'https',
-            port: 8081,
-            launchTimeout: 60000, // 60 seconds
-            waitOnScheme: {
-                strictSSL: false,
-                headers: cosmosDBAuthorizationHeaders
+        servers.push(
+            {
+                command: 'powershell docker run --name azure-cosmosdb-emulator --rm --memory 2GB -v ' +
+                    `${cosmosDBTempPath}:C:\\CosmosDB.Emulator\\bind-mount ` +
+                    '-p 8081:8081 -p 8900:8900 -p 8901:8901 -p 8902:8902 -p 10250:10250 -p 10251:10251 ' +
+                    '-p 10252:10252 -p 10253:10253 -p 10254:10254 -p 10255:10255 -p 10256:10256 -p 10350:10350 ' +
+                    '-i mcr.microsoft.com/cosmosdb/winsrv2019/azure-cosmos-emulator',
+                protocol: 'https',
+                port: 8081,
+                launchTimeout: 60000, // 60 seconds
+                waitOnScheme: {
+                    strictSSL: false,
+                    headers: cosmosDBAuthorizationHeaders
+                },
+                serversStarted
             },
-            serversStarted
-        });
+            startSignalR);
     } else {
+        const signalRExists = await runCommandAsync(
+            'asrs-emulator',
+            {
+                errorCodeToResponses: {
+                    1: false
+                }
+            });
+
+        if (signalRExists) {
+            servers.push(startSignalR);
+        } else {
+            servers.push({
+                command: 'echo Install dotnet tool Microsoft.Azure.SignalR.Emulator.&&' +
+                    'echo The following command can be used to install the emulator:&&' +
+                    'echo dotnet tool install -g Microsoft.Azure.SignalR.Emulator --version 1.0.0-preview1-10723&&' +
+                    'echo https://localhost:8088/&&timeout 10', // 10 seconds
+                protocol: 'https',
+                port: 8088,
+                usedPortAction: 'ignore',
+                waitOnScheme: {
+                    strictSSL: false,
+                    headers: cosmosDBAuthorizationHeaders
+                },
+                serversStarted
+            });
+        }
+
         servers.push({
             command: 'echo Ensure Azure Cosmos emulator is running.&&' +
                 'echo The following command can be used to start the emulator&&' +

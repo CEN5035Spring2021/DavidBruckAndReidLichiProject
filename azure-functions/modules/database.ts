@@ -108,3 +108,7 @@ export function getGroupUserConfirmationsContainer(database: DatabaseResponse) :
         id: 'GroupUserConfirmations'
     });
 }
+
+export function getIdParamName(organizationOrdinal: number): string {
+    return `@id${organizationOrdinal}`;
+}
