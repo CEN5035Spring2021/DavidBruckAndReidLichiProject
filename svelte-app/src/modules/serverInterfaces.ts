@@ -63,3 +63,13 @@ export enum CreateGroupUserResponseType {
     Created = 'Created',
     ConfirmationEmailSent = 'ConfirmationEmailSent'
 }
+export interface SignalRConnectionInfo {
+    accessToken: string;
+    url: string;
+}
+export interface NewGroupUserMessage {
+    organization: string;
+    group: string;
+    emailAddress: string;
+    encryptionKey: string;
+}

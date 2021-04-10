@@ -13,7 +13,7 @@
     import type { Writable } from 'svelte/store';
     import { readable } from 'svelte/store';
     import { writable } from 'svelte/store';
-    import { subscribePleaseWait } from '../stores/globalFeedback';
+    import { globalFeedback, subscribePleaseWait } from '../stores/globalFeedback';
     import { api } from '../modules/api';
     import type { IGroup } from '../stores/group';
     import { selectedGroup, groupUsers } from '../stores/group';
@@ -22,6 +22,8 @@
 
     export let close: () => void;
     export let creatingGroupUser: Writable<boolean>;
+
+    const POST = 'POST';
 
     let newEmailAddressInput: HTMLInputElement;
     let feedback: string;
@@ -90,7 +92,6 @@
         $creatingGroupUser = true;
         try {
             const crypt = new OpenCrypto();
-            const POST = 'POST';
             const url = `${getDefaultFunctionsUrl()}api/creategroupuser`;
             const createGroupUserRequest = await sign<CreateGroupUserRequest>({
                 url,
@@ -138,10 +139,24 @@
             $creatingGroupUser = false;
         }
     };
-    const safeCreateGroupUser: () => void = () => createGroupUser().catch(console.error);
+    const safeCreateGroupUser: () => void = () => createGroupUser().catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeCreateGroupUser: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createGroupUser();
-    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
+    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeOnKeyPress: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     const pleaseWaitSubscription = subscribePleaseWait(creatingGroupUser, 'Creating group user...');
     onDestroy(pleaseWaitSubscription);

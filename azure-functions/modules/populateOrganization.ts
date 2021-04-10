@@ -1,5 +1,7 @@
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
-import { getGroupUsersContainer, getOrganizationsContainer, getOrganizationUsersContainer } from './database';
+import {
+    getGroupUsersContainer, getIdParamName, getOrganizationsContainer, getOrganizationUsersContainer
+} from './database';
 import type { Group, GroupUser, Organization, OrganizationUser, User } from './serverInterfaces';
 
 export interface OrganizationResponse {
@@ -26,7 +28,8 @@ export async function populateOrganization(
         usersToOrganizations,
         usersToGroups,
         organizationUsers,
-        limitToOrganization
+        limitToOrganization,
+        returnGroupNameById
     } : {
         userId: string;
         database: DatabaseResponse;
@@ -36,7 +39,8 @@ export async function populateOrganization(
         usersToGroups: Map<string, GroupResponse[]>;
         organizationUsers?: ContainerResponse;
         limitToOrganization?: string;
-    }) : Promise<void> {
+        returnGroupNameById?: string;
+    }) : Promise<string | void> {
     const existingGroups = new Map<string, GroupResponse>();
     await populateOrganizationImpl({
         database,
@@ -74,6 +78,10 @@ export async function populateOrganization(
                 group.users?.sort();
             }
         }
+    }
+
+    if (returnGroupNameById) {
+        return existingGroups.get(returnGroupNameById).name;
     }
 }
 
@@ -299,7 +307,7 @@ async function populateNonAdminOrganizationGroups(
         groupUsers: ContainerResponse;
         existingGroups: Map<string, GroupResponse>;
         limitToOrganization?: string;
-    }) : Promise<void> {
+    }) : Promise<string | void> {
 
     const nonAdminOrganizations : Map<string, OrganizationResponse> = new Map(
         [ ...existingOrganizations.entries() ]
@@ -443,8 +451,4 @@ async function populateGroupUsers(
             }
         }
     } while (groupUsersReader.hasMoreResults());
-}
-
-function getIdParamName(organizationOrdinal: number) {
-    return `@id${organizationOrdinal}`;
 }

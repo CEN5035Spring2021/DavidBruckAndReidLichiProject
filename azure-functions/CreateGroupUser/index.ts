@@ -7,7 +7,7 @@ import * as crypto from 'crypto';
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
 import { v4 as uuidV4 } from 'uuid';
 import {
-    getGroupsContainer, getGroupUserConfirmationsContainer, getGroupUsersContainer, getDatabase,
+    getGroupsContainer, getGroupUserConfirmationsContainer, getGroupUsersContainer, getDatabase, getIdParamName,
     getOrganizationUsersContainer
 } from '../modules/database';
 import type { GroupResponse, OrganizationResponse, UserResponse } from '../modules/populateOrganization';
@@ -32,6 +32,12 @@ enum CreateGroupUserResponseType {
     AlreadyExists = 'AlreadyExists',
     Created = 'Created',
     ConfirmationEmailSent = 'ConfirmationEmailSent'
+}
+interface NewGroupUserMessage {
+    organization: string;
+    group: string;
+    emailAddress?: string;
+    encryptionKey?: string;
 }
 
 const EMAIL_FROM = process.env['CEN5035Spring2021bruck010Email'];
@@ -134,7 +140,7 @@ async function handleConfirmation(
     const usersToOrganizations = new Map<string, string[]>();
     const usersToGroups = new Map<string, GroupResponse[]>();
 
-    await populateOrganization({
+    const groupName = await populateOrganization({
         userId: ensuredUserId,
         database,
         groups,
@@ -142,20 +148,48 @@ async function handleConfirmation(
         usersToOrganizations,
         usersToGroups,
         organizationUsers,
-        limitToOrganization: groupUserConfirmation.organizationId
+        limitToOrganization: groupUserConfirmation.organizationId,
+        returnGroupNameById: groupUserConfirmation.groupId
+    }) as string;
+
+    const userResponses = await populateOrganizationUsers({
+        users,
+        existingOrganizations,
+        usersToOrganizations,
+        usersToGroups
     });
+
+    // Prepare to tell all other group users about the new user in the group
+    let existingUser: UserResponse;
+    const signalRUsers: string[] = [];
+    const lowercasedEmailAddress = body.emailAddress.toLowerCase();
+    const groupUserEmailAddresses = new Set(
+        organization.groups.find(group => group.name === groupName).users.map(
+            groupUserEmailAddress => groupUserEmailAddress.toLowerCase()));
+    for (const userResponse of userResponses) {
+        const userResponseLowercasedEmailAddress = userResponse.emailAddress.toLowerCase();
+        if (!existingUser && userResponseLowercasedEmailAddress === lowercasedEmailAddress) {
+            existingUser = userResponse;
+        }
+        if (userResponseLowercasedEmailAddress !== lowercasedEmailAddress
+            && groupUserEmailAddresses.has(userResponseLowercasedEmailAddress)) {
+            signalRUsers.push(userResponse.emailAddress);
+        }
+    }
 
     result({
         context,
         response: {
             type: CreateGroupUserResponseType.Created,
             organization,
-            users: await populateOrganizationUsers({
-                users,
-                existingOrganizations,
-                usersToOrganizations,
-                usersToGroups
-            })
+            users: userResponses
+        },
+        signalRUsers,
+        signalRMessage: {
+            organization: organization.name,
+            group: groupName,
+            emailAddress: existingUser.emailAddress,
+            encryptionKey: existingUser.encryptionPublicKey
         }
     });
 }
@@ -249,6 +283,14 @@ async function handleNonConfirmation(
         userId: user.id
     });
 
+    const signalRUsers = await getExistingGroupUsers({
+        groupUsers,
+        users,
+        organizationId: organization.id,
+        groupId: group.id,
+        excludeUserId: userId
+    });
+
     // No need to send confirmation email, we already know the user
     result({
         context,
@@ -260,8 +302,73 @@ async function handleNonConfirmation(
                     encryptionPublicKey: user.encryptionKey
                 }
             ]
+        },
+        signalRUsers,
+        signalRMessage: {
+            organization: organization.name,
+            group: body.groupName,
+            emailAddress: user.emailAddress,
+            encryptionKey: user.encryptionKey
         }
     });
+}
+
+async function getExistingGroupUsers(
+    { groupUsers, users, organizationId, groupId, excludeUserId } : {
+        groupUsers: ContainerResponse;
+        users: ContainerResponse;
+        organizationId: string;
+        groupId: string;
+        excludeUserId: string;
+    }) : Promise<string[]> {
+    const ORGANIZATION_ID_NAME = '@organizationId';
+    const GROUP_ID_NAME = '@groupId';
+    const groupUsersReader = groupUsers.container.items.query({
+        query: `SELECT * FROM root r WHERE r.organizationId = ${ORGANIZATION_ID_NAME} AND r.groupId = ${GROUP_ID_NAME}`,
+        parameters: [
+            {
+                name: ORGANIZATION_ID_NAME,
+                value: organizationId
+            },
+            {
+                name: GROUP_ID_NAME,
+                value: groupId
+            }
+        ]
+    }) as QueryIterator<GroupUser & Resource>;
+
+    const groupUserIds: string[] = [];
+    do {
+        const { resources } = await groupUsersReader.fetchNext();
+        for (const groupUser of resources) {
+            if (groupUser.userId !== excludeUserId) {
+                groupUserIds.push(groupUser.userId);
+            }
+        }
+    } while (groupUsersReader.hasMoreResults());
+
+    const usersReader = users.container.items.query({
+        query: `SELECT * FROM root r WHERE r.id IN (${
+            [ ...groupUserIds.keys() ]
+                .map(getIdParamName)
+                .join(',')
+        })`,
+        parameters: groupUserIds.map(
+            ((id, userIdOrdinal) => ({
+                name: getIdParamName(userIdOrdinal),
+                value: id
+            })))
+    }) as QueryIterator<User & Resource>;
+
+    const existingGroupUsers: string[] = [];
+    do {
+        const { resources } = await usersReader.fetchNext();
+        for (const user of resources) {
+            existingGroupUsers.push(user.emailAddress);
+        }
+    } while (usersReader.hasMoreResults());
+
+    return existingGroupUsers;
 }
 
 async function getExistingGroup(
@@ -498,9 +605,11 @@ async function createGroupUserConfirmation(
 }
 
 function result(
-    { context, response }: {
+    { context, response, signalRUsers, signalRMessage }: {
         context: Context;
         response: CreateGroupUserResponse;
+        signalRUsers?: string[];
+        signalRMessage?: NewGroupUserMessage;
     }) : void {
 
     context.res = {
@@ -509,6 +618,17 @@ function result(
             'Content-Type': 'application/json'
         }
     };
+
+    if (signalRUsers) {
+        context.bindings.signalRMessages = signalRUsers.map(
+            signalRUser => ({
+                userId: signalRUser,
+                target: 'newGroupUser',
+                arguments: [
+                    signalRMessage
+                ]
+            }));
+    }
 }
 
 export default httpTrigger;

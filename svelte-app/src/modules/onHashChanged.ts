@@ -17,7 +17,7 @@ import type {
 import { CreateOrganizationResponseType, CreateGroupUserResponseType } from './serverInterfaces';
 import { sign } from './sign';
 
-const NOT_FOUND = -1;
+const POST = 'POST';
 
 export default async function onHashChanged(
     options?: {
@@ -91,7 +91,6 @@ async function organizationConfirmation(
     confirmingOrganization.set(true);
 
     try {
-        const POST = 'POST';
         const url = `${getDefaultFunctionsUrl()}api/createorganization`;
         const localEmailAddress = get(emailAddress);
         const encryptionPublicKey = await crypt.cryptoPublicToPem(tempEncryptionPublicKey) as string;
@@ -198,7 +197,6 @@ async function groupUserConfirmation(
         return;
     }
 
-    const POST = 'POST';
     const url = `${getDefaultFunctionsUrl()}api/creategroupuser`;
     const createGroupRequest = await sign<CreateGroupUserRequest>({
         url,

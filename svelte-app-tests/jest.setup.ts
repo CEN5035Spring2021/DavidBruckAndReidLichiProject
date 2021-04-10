@@ -17,7 +17,7 @@ if (fs.existsSync(failureScreenshotsDir)) {
     for (const existingScreenshot of fs.readdirSync(failureScreenshotsDir)) {
         const existingScreeshotFullPath = path.resolve(failureScreenshotsDir, existingScreenshot);
         if (fs.lstatSync(existingScreeshotFullPath).isFile()) {
-            fs.rmSync(existingScreeshotFullPath);
+            fs.unlinkSync(existingScreeshotFullPath);
         }
     }
 }

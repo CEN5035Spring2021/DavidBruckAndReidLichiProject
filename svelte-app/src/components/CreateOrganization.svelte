@@ -9,11 +9,13 @@
     import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
     import { runUnderOrganizationStore, selectedOrganization } from '../stores/organization';
     import type { Writable } from 'svelte/store';
-    import { subscribePleaseWait } from '../stores/globalFeedback';
+    import { globalFeedback, subscribePleaseWait } from '../stores/globalFeedback';
     import { api } from '../modules/api';
 
     export let close: () => void;
     export let creatingOrganization: Writable<boolean>;
+
+    const POST = 'POST';
 
     let nameInput: HTMLInputElement;
     let feedback: string;
@@ -35,7 +37,6 @@
         $creatingOrganization = true;
         try {
             const crypt = new OpenCrypto();
-            const POST = 'POST';
             const url = `${getDefaultFunctionsUrl()}api/createorganization`;
             const createOrganizationRequest = await sign<CreateOrganizationRequest>({
                 url,
@@ -85,10 +86,24 @@
             $creatingOrganization = false;
         }
     };
-    const safeCreateOrganization: () => void = () => createOrganization().catch(console.error);
+    const safeCreateOrganization: () => void = () => createOrganization().catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeCreateOrganization: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     const onKeyPress = async(e: KeyboardEvent) => e.key === 'Enter' && await createOrganization();
-    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(console.error);
+    const safeOnKeyPress: (e: KeyboardEvent) => void = e => onKeyPress(e).catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in safeOnKeyPress: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
 
     const pleaseWaitSubscription = subscribePleaseWait(creatingOrganization, 'Creating organization...');
     onDestroy(pleaseWaitSubscription);
