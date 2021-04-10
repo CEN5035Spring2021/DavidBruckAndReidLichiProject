@@ -2,7 +2,7 @@ import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
 import type {
     User, IUser, Group, GroupUser, GroupUserConfirmation, Organization, OrganizationUser
 } from '../modules/serverInterfaces';
-import { validateSignature, getValidatedUser } from '../modules/validateSignature';
+import { validateSignature, getValidatedUser, isInvalidSignature } from '../modules/validateSignature';
 import * as crypto from 'crypto';
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
 import { v4 as uuidV4 } from 'uuid';
@@ -69,8 +69,8 @@ async function handleConfirmation(
             body,
             signingKey: crypto.createPublicKey(body.signingKey)
         });
-    if (typeof bodyValidated === 'boolean' || !bodyValidated) {
-        throw new Error('Request body has unverified signature');
+    if (isInvalidSignature(bodyValidated)) {
+        throw new Error(`Request body has unverified signature:\n${bodyValidated.standardizedBody}`);
     }
 
     const database = await getDatabase();
