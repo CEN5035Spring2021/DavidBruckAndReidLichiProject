@@ -36,7 +36,7 @@ export function validateSignature<T>(
     const toVerify: T & { method: string; url: string } = {
         ...body,
         method,
-        url,
+        url: url.replace(/^https?:\/\//i, ''), // On Azure, req.url starts http:// even though accessed via https
         time
     };
 

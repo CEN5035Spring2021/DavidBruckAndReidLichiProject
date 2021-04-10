@@ -17,7 +17,7 @@ export async function sign<T>(
     const toSign: T & { method: string; url: string; time: string } = {
         ...body,
         method,
-        url,
+        url: url.replace(/^https?:\/\//i, ''), // On Azure, req.url starts http:// even though accessed via https
         time: new Date().toISOString()
     };
 
