@@ -52,8 +52,11 @@ jobs:
     - name: Install Azure SignalR Service emulator
       run: dotnet tool install -g Microsoft.Azure.SignalR.Emulator --version 1.0.0-preview1-10723
 
+    - name: Pre-fetch Azure CosmosDB emulator
+      run: docker pull mcr.microsoft.com/cosmosdb/winsrv2019/azure-cosmos-emulator
+
     - name: Test svelte-app and azure-functions
       working-directory: ./svelte-app-tests
-      run: npm test
+      run: npm run test-slow
     env:
       CI: true
