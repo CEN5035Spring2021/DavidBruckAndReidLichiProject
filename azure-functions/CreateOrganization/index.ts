@@ -2,7 +2,7 @@ import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
 import type {
     Organization, OrganizationConfirmation, OrganizationUser, User, IUser
 } from '../modules/serverInterfaces';
-import { validateSignature, getValidatedUser } from '../modules/validateSignature';
+import { validateSignature, getValidatedUser, isInvalidSignature } from '../modules/validateSignature';
 import * as crypto from 'crypto';
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
 import { v4 as uuidV4 } from 'uuid';
@@ -43,8 +43,8 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
             body,
             signingKey: crypto.createPublicKey(body.signingKey)
         });
-    if (typeof bodyValidated === 'boolean' || !bodyValidated) {
-        throw new Error('Request body has unverified signature');
+    if (isInvalidSignature(bodyValidated)) {
+        throw new Error(`Request body has unverified signature:\n${bodyValidated.standardizedBody}`);
     }
     if (!body.name && !body.confirmation) {
         throw new Error('Request body lacks name');

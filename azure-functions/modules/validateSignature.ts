@@ -7,13 +7,16 @@ import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } fro
 const FIVE_MINUTES_AGO = -300000;
 const FIVE_MINUTES_IN_THE_FUTURE = 300000;
 
+type invalidSignature = { success: false; standardizedBody: string };
+type validSignature<T> = { success: true; unsignedBody: T; signature: string; time: string };
+
 export function validateSignature<T>(
     { method, url, body, signingKey } : {
         method: string;
         url: string;
         body: T & Signed;
         signingKey: KeyObject;
-    }) : false | { unsignedBody: T; signature: string; time: string } {
+    }) : invalidSignature | validSignature<T> {
 
     if (body == null) {
         throw new Error('Missing request body');
@@ -33,16 +36,17 @@ export function validateSignature<T>(
     const toVerify: T & { method: string; url: string } = {
         ...body,
         method,
-        url,
+        url: url.replace(/^https?:\/\//i, ''), // On Azure, req.url starts http:// even though accessed via https
         time
     };
 
     delete body.time;
 
+    const standardizedBody = JSON.stringify(toVerify, Object.keys(toVerify).sort());
     if (!signature
         || !crypto
             .createVerify('RSA-SHA512')
-            .update(new TextEncoder().encode(JSON.stringify(toVerify, Object.keys(toVerify).sort())))
+            .update(new TextEncoder().encode(standardizedBody))
             .verify(
                 {
                     key: signingKey
@@ -50,14 +54,23 @@ export function validateSignature<T>(
                 signature,
                 'base64'))
     {
-        return false;
+        return {
+            success: false,
+            standardizedBody
+        };
     }
 
     return {
+        success: true,
         unsignedBody: body,
         signature,
         time
     };
+}
+
+export function isInvalidSignature<T>(signatureResult: invalidSignature | validSignature<T>)
+    : signatureResult is invalidSignature {
+    return !signatureResult || !signatureResult.success;
 }
 
 export async function getValidatedUser<T extends IUser>(
@@ -111,7 +124,7 @@ export async function getValidatedUser<T extends IUser>(
                     url,
                     body,
                     signingKey: crypto.createPublicKey(user.signingKey)
-                })) {
+                }).success) {
                     userId = user.id;
                     emailAddress = user.emailAddress;
                     break;
