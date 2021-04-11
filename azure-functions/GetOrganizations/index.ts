@@ -21,6 +21,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         throw new Error('Request body lacks emailAddress');
     }
 
+    console.error(process.env.NODE_EXTRA_CA_CERTS);
     const { database, users, userId } = await getValidatedUser({
         method: req.method,
         url: req.url,
@@ -42,12 +43,12 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         context,
         response: {
             organizations,
-            users: await populateOrganizationUsers({
+            users: (await populateOrganizationUsers({
                 users,
                 existingOrganizations,
                 usersToOrganizations,
                 usersToGroups
-            })
+            })).users
         }
     });
 };

@@ -39,8 +39,7 @@ export const signingPrivateKey = writable<CryptoKey>(null);
 export const signingPublicKey = writable<CryptoKey>(null);
 export function runUnderUserStore<TState, TResult>(
     callback: (userStore: UserStore, state: TState) => Promise<TResult>,
-    state?: TState
-): Promise<TResult>
+    state?: TState): Promise<TResult>
 {
     return runUnderStore({
         storeName: StoreName.UserStore,

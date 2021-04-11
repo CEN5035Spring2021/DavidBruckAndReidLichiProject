@@ -5,7 +5,8 @@ module.exports = function(api) {
         exclude: [
             'node_modules/@babel/**',
             'node_modules/core-js/**',
-            'node_modules/@microsoft/signalr/**'
+            'node_modules/@microsoft/signalr/**',
+            'public/signalr/**'
         ],
         presets: [
             [

@@ -7,6 +7,7 @@ import sveltePreprocess from 'svelte-preprocess';
 import typescript from '@rollup/plugin-typescript';
 import css from 'rollup-plugin-css-only';
 import babel from '@rollup/plugin-babel';
+import copy from 'rollup-plugin-copy';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -37,9 +38,23 @@ export default {
 		sourcemap: true,
 		format: 'iife',
 		name: 'app',
-		file: 'public/build/bundle.js'
+		file: 'public/build/bundle.js',
+		globals: {
+			'@microsoft/signalr': 'signalR'
+		}
 	},
+	external: [
+		'@microsoft/signalr'
+	],
 	plugins: [
+		copy({
+			targets: [
+				{
+					src: 'node_modules/@microsoft/signalr/dist/browser/*',
+					dest: 'public/signalr'
+				}
+			]
+		}),
 		svelte({
 			preprocess: sveltePreprocess({
 				sourceMap: true,

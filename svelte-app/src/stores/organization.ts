@@ -23,9 +23,9 @@ export interface IOrganization extends IHasGroups {
 
 export class OrganizationStore extends Store {
     public async update({ lowercasedEmailAddress, organizations } : {
-            lowercasedEmailAddress: string;
-            organizations: IOrganization[];
-        }): Promise<IGroup[] | undefined> {
+        lowercasedEmailAddress: string;
+        organizations: IOrganization[];
+    }): Promise<IGroup[] | undefined> {
         let addedGroups: IGroup[] | undefined;
         for (const organization of organizations) {
             const newAddedGroups = await this.appendImpl({
@@ -209,9 +209,9 @@ export class OrganizationStore extends Store {
     }
 }
 function updateOrganizationUsers({ organization, users } : {
-        organization: IOrganization;
-        users?: IOrganizationUser[];
-    }): void {
+    organization: IOrganization;
+    users?: IOrganizationUser[];
+}): void {
     if (!users) {
         return;
     }
@@ -284,8 +284,7 @@ export const confirmingOrganization = writable<boolean>(false);
 export const selectedOrganization = writable<string>(null);
 export function runUnderOrganizationStore<TState, TResult>(
     callback: (organizationStore: OrganizationStore, state: TState) => Promise<TResult>,
-    state?: TState
-): Promise<TResult>
+    state?: TState): Promise<TResult>
 {
     return runUnderStore({
         storeName: StoreName.OrganizationStore,

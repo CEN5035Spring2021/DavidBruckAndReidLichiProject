@@ -143,8 +143,7 @@ export const groupUsers = readable<IOrganizationUser[]>(
 export const selectedGroup = writable<IGroup>(null);
 export function runUnderGroupStore<TState, TResult>(
     callback: (GroupStore: GroupStore, state: TState) => Promise<TResult>,
-    state?: TState
-): Promise<TResult>
+    state?: TState): Promise<TResult>
 {
     return runUnderStore({
         storeName: StoreName.OrganizationStore,
@@ -154,9 +153,9 @@ export function runUnderGroupStore<TState, TResult>(
     });
 }
 export function updateGroups({ organization, groups } : {
-        organization: IHasGroups;
-        groups?: IGroup[];
-    }): IGroup[] | undefined {
+    organization: IHasGroups;
+    groups?: IGroup[];
+}): IGroup[] | undefined {
     if (!groups) {
         return;
     }

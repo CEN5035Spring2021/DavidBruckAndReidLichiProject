@@ -86,15 +86,21 @@ export async function populateOrganization(
 }
 
 export async function populateOrganizationUsers(
-    { users, existingOrganizations, usersToOrganizations, usersToGroups } : {
+    { users, existingOrganizations, usersToOrganizations, usersToGroups, includeAdminUser } : {
         users: ContainerResponse;
         existingOrganizations: Map<string, OrganizationResponse>;
         usersToOrganizations: Map<string, string[]>;
         usersToGroups: Map<string, GroupResponse[]>;
-    }) : Promise<UserResponse[] | undefined> {
+        includeAdminUser?: string;
+    }) : Promise<{ adminIdx?: number; users: UserResponse[] | undefined }> {
     const userIds = new Set<string>([ ...usersToOrganizations.keys(), ...usersToGroups.keys() ]);
+    if (includeAdminUser) {
+        userIds.add(includeAdminUser);
+    }
     if (!userIds.size) {
-        return [];
+        return {
+            users: []
+        };
     }
 
     const usersReader = users.container.items.query({
@@ -110,6 +116,7 @@ export async function populateOrganizationUsers(
             })))
     }) as QueryIterator<User & Resource>;
 
+    let adminUser: string | undefined;
     let existingUsers: UserResponse[] | undefined;
     do {
         for (const existingUser of (await usersReader.fetchNext()).resources) {
@@ -145,6 +152,10 @@ export async function populateOrganizationUsers(
             } else {
                 existingUsers = [ newUser ];
             }
+
+            if (existingUser.id === includeAdminUser) {
+                adminUser = existingUser.emailAddress;
+            }
         }
     } while (usersReader.hasMoreResults());
 
@@ -158,7 +169,11 @@ export async function populateOrganizationUsers(
     existingUsers?.sort(
         (a, b) => a.emailAddress === b.emailAddress ? 0 : (a.emailAddress > b.emailAddress ? 1 : -1));
 
-    return existingUsers;
+    return {
+        adminIdx: adminUser && existingUsers?.findIndex(
+            existingUser => existingUser.emailAddress === adminUser),
+        users: existingUsers
+    };
 }
 
 export async function getExistingOrganization(
@@ -188,14 +203,15 @@ export async function getExistingOrganization(
 }
 
 export async function getOrganizationAdmin(
-    { database, organizationId } : {
+    { database, organizationId, organizationUsers } : {
         database: DatabaseResponse;
         organizationId: string;
+        organizationUsers?: ContainerResponse;
     }) : Promise<OrganizationUser & Resource | undefined> {
 
-    const organizationUsers = await getOrganizationUsersContainer(database);
+    const ensuredOrganizationUsers = organizationUsers || await getOrganizationUsersContainer(database);
     const ORGANIZATION_ID_NAME = '@organizationId';
-    const organizationUsersReader = organizationUsers.container.items.query({
+    const organizationUsersReader = ensuredOrganizationUsers.container.items.query({
         query: `SELECT * FROM root r WHERE r.organizationId = ${ORGANIZATION_ID_NAME} AND r.admin`,
         parameters: [
             {

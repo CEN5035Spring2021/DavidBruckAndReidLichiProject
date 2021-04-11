@@ -84,8 +84,7 @@ export class SettingsStore extends Store {
 }
 export function runUnderSettingsStore<TState, TResult>(
     callback: (userStore: SettingsStore, state: TState) => Promise<TResult>,
-    state?: TState
-): Promise<TResult>
+    state?: TState): Promise<TResult>
 {
     return runUnderStore({
         storeName: StoreName.SettingsStore,
