@@ -1,4 +1,4 @@
-import { HubConnectionBuilder } from '@microsoft/signalr';
+import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { unconditionalMessage, showUnconditionalMessage, globalFeedback } from '../stores/globalFeedback';
 import { runUnderOrganizationStore } from '../stores/organization';
 import { api } from './api';
@@ -10,6 +10,7 @@ const GET = 'GET';
 export async function connectSignalR(xMsClientPrincipalName: string) : Promise<void> {
     let firstConnectionInfo = await getSignalRConnectionInfo(xMsClientPrincipalName);
     const hubConnection = new HubConnectionBuilder()
+        .configureLogging(LogLevel.Error)
         .withUrl(
             firstConnectionInfo.url,
             {

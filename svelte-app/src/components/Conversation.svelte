@@ -1,26 +1,31 @@
 <script lang=ts>
-    import { selectedConversation, selectedUser } from '../stores/conversation';
+    import { selectedConversation, selectedUsers } from '../stores/conversation';
     import type { IConversation } from '../stores/group';
     import type { IOrganizationUser } from '../stores/user';
 
     let clazz: string;
     export { clazz as class };
+    export let notInConversation = false;
     export let conversation: IConversation = undefined;
     export let user: IOrganizationUser = undefined;
 
     $: conversationSelected = conversation
         ? $selectedConversation === conversation
-        : $selectedUser === user;
+        : ($selectedUsers as IOrganizationUser[]).some(
+            selectedUser => selectedUser === user);
 
-    $: combinedClass = `${clazz}${conversationSelected ? ' selected' : ''}`;
+    $: combinedClass =
+        `${clazz}${conversationSelected ? ' selected' : ''}${notInConversation ? ' notInConversation' : ''}`;
 
     $: usersEmailAddresses = conversation
         ? conversation.users.map(user => user.emailAddress).join(', ')
         : user.emailAddress;
 
-    const selectConversation = () => conversation
-        ? $selectedConversation = conversation
-        : $selectedUser = user;
+    const selectConversation = () =>
+        !conversationSelected
+            && (conversation
+                ? $selectedConversation = conversation
+                : $selectedUsers = [ user ]);
 </script>
 
 <div class={ combinedClass } on:click={ selectConversation }>
@@ -39,4 +44,8 @@
         div.selected {
             background-color: #85c0f9;
         }
+
+    .notInConversation {
+        font-style: italic;
+    }
 </style>

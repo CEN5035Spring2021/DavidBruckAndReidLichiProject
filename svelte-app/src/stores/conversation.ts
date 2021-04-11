@@ -108,8 +108,11 @@ export const usersNotInConversation = readable<IOrganizationUser[]>(
             usersSubscription();
         };
     });
+
 export const selectedConversation = writable<IConversation>(null);
-export const selectedUser = writable<IOrganizationUser>(null);
+export const selectedUsers = writable<IOrganizationUser[]>([]);
+export const conversationUsers = writable<IOrganizationUser[]>(
+    getConversationUsers(get(selectedConversation), get(selectedUsers)));
 export function runUnderConversationStore<TState, TResult>(
     callback: (ConversationStore: ConversationStore, state: TState) => Promise<TResult>,
     state?: TState): Promise<TResult>
@@ -121,13 +124,50 @@ export function runUnderConversationStore<TState, TResult>(
         state
     });
 }
+function getConversationUsers(selectedConversation: IConversation, selectedUsers?: IOrganizationUser[]) {
+    return selectedConversation
+        ? selectedConversation.users
+        : selectedUsers || [];
+}
 
 selectedGroup.subscribe(() => {
     selectedConversation.set(null);
-    selectedUser.set(null);
+    selectedUsers.set([]);
 });
-selectedConversation.subscribe(conversation => conversation && selectedUser.set(null));
-selectedUser.subscribe(user => user && selectedConversation.set(null));
+selectedConversation.subscribe(conversation => conversation && selectedUsers.set([]));
+selectedUsers.subscribe(users => users.length && selectedConversation.set(null));
+
+selectedConversation.subscribe(
+    value => conversationUsers.set(getConversationUsers(value, get(selectedUsers))));
+selectedUsers.subscribe(
+    value => conversationUsers.set(getConversationUsers(get(selectedConversation), value)));
+
+conversationUsers.subscribe(value => {
+    if (!value.length) {
+        if (get(selectedUsers).length || get(selectedConversation)) {
+            selectedUsers.set([]);
+            selectedConversation.set(null);
+        }
+        return;
+    }
+
+    const matchingConversation = get(conversations).find(
+        conversation => !usersOrder({
+            a: value,
+            b: conversation.users,
+            idx: ARRAY_START
+        }));
+    if (matchingConversation) {
+        if (get(selectedConversation) !== matchingConversation) {
+            selectedConversation.set(matchingConversation);
+        }
+        return;
+    }
+
+    if (get(selectedUsers) !== value) {
+        selectedUsers.set(value);
+    }
+});
 
 function appendConversation({ group, conversation } : {
     group: IGroup;
