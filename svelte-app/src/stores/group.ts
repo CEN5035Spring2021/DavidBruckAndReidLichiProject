@@ -12,9 +12,14 @@ const NOT_FOUND = -1;
 export interface IGroup {
     name: string;
     users?: IOrganizationUser[];
+    conversations?: IConversation[];
 }
 export interface IHasGroups {
     groups?: IGroup[];
+}
+export interface IConversation {
+    id: string;
+    users: IOrganizationUser[];
 }
 
 export class GroupStore extends Store {

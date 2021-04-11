@@ -1,8 +1,10 @@
 <script lang=ts>
     import { writable } from 'svelte/store';
+    import { conversations, usersNotInConversation } from '../stores/conversation';
     import type { IGroup } from '../stores/group';
     import { selectedGroup } from '../stores/group';
     import { isOrganizationAdmin } from '../stores/organization';
+    import Conversation from './Conversation.svelte';
     import ManageGroup from './ManageGroup.svelte';
 
     export let group: IGroup;
@@ -18,10 +20,16 @@
     const closeGroupManagement = () => $creatingGroupUser as boolean || (manageGroupModalOpen = false);
 </script>
 
-<li class:selected={ groupSelected } on:click={ selectGroup }>
-    <div>{ groupName }</div>
+<li class:selected={ groupSelected }>
+    <div on:click={ selectGroup }>{ groupName }</div>
     { #if groupSelected }
         <hr />
+        { #each $conversations as conversation }
+            <Conversation { conversation } class=conversation />
+        { /each }
+        { #each $usersNotInConversation as user }
+            <Conversation { user } class=conversation />
+        { /each }
         { #if $isOrganizationAdmin }
             <button on:click={ manageGroup }>Manage group</button>
         { /if }
@@ -34,6 +42,9 @@
 </li>
 
 <style>
+    :global(.conversation + .conversation) {
+        border-top: none;
+    }
     li {
         margin: 0px 5px;
         border: 1px solid black;

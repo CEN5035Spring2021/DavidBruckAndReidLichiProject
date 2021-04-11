@@ -358,6 +358,11 @@ async function getExistingGroupUsers(
         }
     } while (groupUsersReader.hasMoreResults());
 
+    const existingGroupUsers: string[] = [];
+    if (!groupUserIds.length) {
+        return existingGroupUsers;
+    }
+
     const usersReader = users.container.items.query({
         query: `SELECT * FROM root r WHERE r.id IN (${
             [ ...groupUserIds.keys() ]
@@ -371,7 +376,6 @@ async function getExistingGroupUsers(
             })))
     }) as QueryIterator<User & Resource>;
 
-    const existingGroupUsers: string[] = [];
     do {
         const { resources } = await usersReader.fetchNext();
         for (const user of resources) {
