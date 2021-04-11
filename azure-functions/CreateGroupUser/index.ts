@@ -152,11 +152,18 @@ async function handleConfirmation(
         returnGroupNameById: groupUserConfirmation.groupId
     }) as string;
 
-    const userResponses = await populateOrganizationUsers({
+    const organizationAdmin = await getOrganizationAdmin({
+        database,
+        organizationId: groupUserConfirmation.organizationId,
+        organizationUsers
+    });
+
+    const { adminIdx, users: userResponses } = await populateOrganizationUsers({
         users,
         existingOrganizations,
         usersToOrganizations,
-        usersToGroups
+        usersToGroups,
+        includeAdminUser: organizationAdmin.userId
     });
 
     // Prepare to tell all other group users about the new user in the group
@@ -166,13 +173,17 @@ async function handleConfirmation(
     const groupUserEmailAddresses = new Set(
         organization.groups.find(group => group.name === groupName).users.map(
             groupUserEmailAddress => groupUserEmailAddress.toLowerCase()));
-    for (const userResponse of userResponses) {
+    for (let userIdx = 0, usersLength = userResponses.length;
+        userIdx < usersLength;
+        userIdx++) {
+        const userResponse = userResponses[userIdx];
         const userResponseLowercasedEmailAddress = userResponse.emailAddress.toLowerCase();
         if (!existingUser && userResponseLowercasedEmailAddress === lowercasedEmailAddress) {
             existingUser = userResponse;
         }
         if (userResponseLowercasedEmailAddress !== lowercasedEmailAddress
-            && groupUserEmailAddresses.has(userResponseLowercasedEmailAddress)) {
+            && (groupUserEmailAddresses.has(userResponseLowercasedEmailAddress)
+                || userIdx === adminIdx)) {
             signalRUsers.push(userResponse.emailAddress);
         }
     }
