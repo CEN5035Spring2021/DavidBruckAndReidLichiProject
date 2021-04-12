@@ -1,5 +1,6 @@
 import { writable, get, readable } from 'svelte/store';
 import { StoreName, runUnderStore, Store } from '../modules/database';
+import type { IGlobalFeedback } from './globalFeedback';
 import { showUnconditionalMessage, unconditionalMessage } from './globalFeedback';
 import type { IGroup, IHasGroups } from './group';
 import { updateGroupUsers } from './group';
@@ -295,23 +296,26 @@ export function runUnderOrganizationStore<TState, TResult>(
 }
 export const switchingOrganization = writable<boolean>(false);
 
+const confirmationOrganizationMessage: IGlobalFeedback = {
+    message: 'Confirming organization...',
+    isInformational: true
+};
 confirmingOrganization.subscribe(value => {
-    unconditionalMessage.set(value
-        ? {
-            message: 'Confirming organization...',
-            isInformational: true
-        }
-        : undefined);
-    showUnconditionalMessage.set(value);
+    if (value || get(unconditionalMessage) === confirmationOrganizationMessage) {
+        unconditionalMessage.set(value ? confirmationOrganizationMessage : undefined);
+        showUnconditionalMessage.set(value);
+    }
 });
+
+const switchingOrganizationMessage: IGlobalFeedback = {
+    message: 'Switching organizations...',
+    isInformational: true
+};
 switchingOrganization.subscribe(value => {
-    unconditionalMessage.set(value
-        ? {
-            message: 'Switching organizations...',
-            isInformational: true
-        }
-        : undefined);
-    showUnconditionalMessage.set(value);
+    if (value || get(unconditionalMessage) === switchingOrganizationMessage) {
+        unconditionalMessage.set(value ? switchingOrganizationMessage : undefined);
+        showUnconditionalMessage.set(value);
+    }
 });
 
 selectedOrganization.subscribe(value => {

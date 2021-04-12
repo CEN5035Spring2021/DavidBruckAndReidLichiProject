@@ -29,14 +29,16 @@ export const globalFeedbackLength = readable<number | boolean>(
     });
 export function subscribePleaseWait(value: Readable<boolean>, message: string): () => void {
     return value.subscribe(value => {
-        unconditionalMessage.update(() =>
-            value
-                ? {
-                    message,
-                    isInformational: true
-                }
-                : undefined);
-        showUnconditionalMessage.update(() => value);
+        if (value || message === get(unconditionalMessage)?.message) {
+            unconditionalMessage.set(
+                value
+                    ? {
+                        message,
+                        isInformational: true
+                    }
+                    : undefined);
+            showUnconditionalMessage.set(value);
+        }
     });
 }
 

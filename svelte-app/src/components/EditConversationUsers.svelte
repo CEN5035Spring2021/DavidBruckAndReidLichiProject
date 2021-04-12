@@ -2,6 +2,7 @@
     import type { Writable } from 'svelte/store';
     import { writable } from 'svelte/store';
     import type { IOrganizationUser } from '../stores/user';
+    import { emailAddress } from '../stores/user';
     import Modal from './Modal.svelte';
     import { onDestroy } from 'svelte';
     import { groupUsers } from '../stores/group';
@@ -22,15 +23,21 @@
 
     $: unAddedConversationUsers = ($groupUsers as IOrganizationUser[]).filter(
         (function(this: null, conversationUserEmailAddresses: Set<string>, value: IOrganizationUser) {
-            return !conversationUserEmailAddresses.has(value.emailAddress.toLowerCase());
+            const valueEmailAddressLowerCase = value.emailAddress.toLowerCase();
+            return valueEmailAddressLowerCase !== ($emailAddress as string).toLowerCase()
+                && !conversationUserEmailAddresses.has(valueEmailAddressLowerCase);
         }).bind(
             null,
             new Set(($editableConversationUsers as IOrganizationUser[])
                 .map(conversationUser => conversationUser.emailAddress.toLowerCase()))));
+    $: unAddedConversationUsersLength = (unAddedConversationUsers as IOrganizationUser[]).length;
     $: editableConversationUsersLength = ($editableConversationUsers as IOrganizationUser[]).length;
 
     const addUserToConversation = (user: IOrganizationUser) =>
-        editableConversationUsers.update(value => [ ...value, user ]);
+        editableConversationUsers.update(value =>
+            (value.length && value[0].emailAddress.toLowerCase() === ($emailAddress as string).toLowerCase())
+                ? [ user ]
+                : [ ...value, user ]);
 
     const clear = () => $editableConversationUsers = [];
     const ok = () => {
@@ -48,7 +55,11 @@
 <Modal { close }>
     <h2 slot=title>{ usersEmailAddresses }</h2>
     <div slot=content>
-        <h3>Add user to conversation</h3>
+        { #if unAddedConversationUsersLength }
+            <h3>Add user to conversation</h3>
+        { :else }
+            <h3>All group users already added to conversation</h3>
+        { /if }
         <ul>
             { #each unAddedConversationUsers as user }
                 <AddUserToConversation { user } { addUserToConversation } />

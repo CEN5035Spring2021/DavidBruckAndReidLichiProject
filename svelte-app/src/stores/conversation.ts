@@ -18,18 +18,21 @@ export class ConversationStore extends Store {
         organizationName: string;
         groupName: string;
         conversation: IConversation;
-    }): Promise<void> {
+    }): Promise<string> {
         const localSupportsCompositeKey = await SettingsStore.supportsCompositeKey();
         const lowercasedEmailAddress = get(emailAddress).toLowerCase();
 
         if (get(selectedOrganization) === organizationName) {
             const existingGroup = get(organizationGroups).find(
                 organizationGroup => organizationGroup.name === groupName);
-            if (existingGroup && !appendConversation({
-                group: existingGroup,
-                conversation
-            })) {
-                return;
+            if (existingGroup) {
+                const existingConversationId = appendConversation({
+                    group: existingGroup,
+                    conversation
+                });
+                if (existingConversationId) {
+                    return existingConversationId;
+                }
             }
         }
 
@@ -44,18 +47,19 @@ export class ConversationStore extends Store {
             getRequest.onerror = () => reject(getRequest.error);
         });
 
-        const existingGroup = existingOrganization.groups?.find(
+        let existingGroup = existingOrganization.groups?.find(
             organizationGroup => organizationGroup.name === groupName);
 
         if (existingGroup) {
-            if (!appendConversation({
+            const existingConversationId = appendConversation({
                 group: existingGroup,
                 conversation
-            })) {
-                return;
+            });
+            if (existingConversationId) {
+                return existingConversationId;
             }
         } else {
-            updateGroups({
+            existingGroup = updateGroups({
                 organization: existingOrganization,
                 groups: [
                     {
@@ -65,13 +69,18 @@ export class ConversationStore extends Store {
                         ]
                     }
                 ]
-            });
+            })[0];
         }
 
         const putRequest = this._store.put(existingOrganization);
         await new Promise((resolve, reject) => {
             putRequest.onsuccess = resolve;
             putRequest.onerror = () => reject(putRequest.error);
+        });
+
+        appendConversation({
+            group: existingGroup,
+            conversation
         });
     }
 }
@@ -172,24 +181,26 @@ conversationUsers.subscribe(value => {
 function appendConversation({ group, conversation } : {
     group: IGroup;
     conversation: IConversation;
-}): boolean {
-    if (group.conversations.some(
+}): string | undefined {
+    const existingConversation = group.conversations?.find(
         existingConversation => existingConversation.users.length === conversation.users.length
             && existingConversation.users.every(
-                (value, index) => value.emailAddress === conversation.users[index].emailAddress))) {
-        return false;
+                (value, index) => value.emailAddress === conversation.users[index].emailAddress));
+    if (existingConversation) {
+        return existingConversation.id;
     }
 
-    group.conversations.push(conversation);
-
-    group.conversations.sort(
-        (a, b) => usersOrder({
-            a: a.users,
-            b: b.users,
-            idx: ARRAY_START
-        }));
-
-    return true;
+    if (group.conversations) {
+        group.conversations.push(conversation);
+        group.conversations.sort(
+            (a, b) => usersOrder({
+                a: a.users,
+                b: b.users,
+                idx: ARRAY_START
+            }));
+    } else {
+        group.conversations = [ conversation ];
+    }
 }
 function usersOrder(
     { a, b, idx } : {

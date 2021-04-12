@@ -1,13 +1,15 @@
 const INITIAL_VERSION = 1;
 const ORGANIZATION_VERSION = 2;
 const SETTINGS_VERSION = 3;
+const MESSAGES_VERSION = 4;
 // Need add a higher version on every schema change
 // Also, when new versions are added, change the line for `indexedDB.open` in the code inside `getDatabase()`
 
 export enum StoreName {
     UserStore = 'UserStore',
     OrganizationStore = 'OrganizationStore',
-    SettingsStore = 'SettingsStore'
+    SettingsStore = 'SettingsStore',
+    MessagesStore = 'MessagesStore'
 }
 
 // Microsoft Edge does not support composite keys in indexedDB. It gives DataError on <store>.put(...).
@@ -70,7 +72,7 @@ export async function getDatabase() : Promise<IDBOpenDBRequest> {
     const localSupportsCompositeKey = await supportsCompositeKey();
 
     // When a higher version is created, it needs to be used on the following line too:
-    const db = indexedDB.open('SecureGroupMessenger', SETTINGS_VERSION);
+    const db = indexedDB.open('SecureGroupMessenger', MESSAGES_VERSION);
 
     db.onupgradeneeded = ev => {
         if (ev.oldVersion < INITIAL_VERSION) {
@@ -101,6 +103,22 @@ export async function getDatabase() : Promise<IDBOpenDBRequest> {
                     keyPath: [
                         'name'
                     ]
+                });
+        }
+        if (ev.oldVersion < MESSAGES_VERSION) {
+            const messagesStore = db.result.createObjectStore(
+                StoreName.MessagesStore,
+                {
+                    keyPath: 'messageId',
+                    autoIncrement: true
+                });
+            messagesStore.createIndex(
+                'conversationId',
+                [
+                    'conversationId',
+                    'date'
+                ], {
+                    unique: false
                 });
         }
     };

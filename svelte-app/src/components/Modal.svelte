@@ -12,7 +12,7 @@
     <slot name=content />
 
     <!-- prevent error "received an unexpected slot 'default'" -->
-    { #if (false) }
+    { #if false }
     <slot></slot>
     { /if }
 </div>
