@@ -1,16 +1,12 @@
 <script lang=ts>
-    import type { IOrganizationUser } from '../stores/user';
-
-    export let user: IOrganizationUser;
-    export let addUserToConversation: (user: IOrganizationUser) => void;
+    export let user: string;
+    export let addUserToConversation: (user: string) => void;
 
     const addUserToConversationImpl = () => addUserToConversation(user);
-
-    $: emailAddress = user.emailAddress;
 </script>
 
 <li on:click={ addUserToConversationImpl }>
-    { emailAddress }
+    { user }
 </li>
 
 <style>

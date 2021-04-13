@@ -126,6 +126,12 @@ describe('A created group is immediately selected', () => {
 
         await createGroupButton?.click();
 
+        await expect(page).not.toMatch(
+            'Creating group...',
+            {
+                timeout: 30000
+            });
+
         await expect(page).toMatch(
             'Created',
             {

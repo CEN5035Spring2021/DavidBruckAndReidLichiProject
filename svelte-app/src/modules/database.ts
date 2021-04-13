@@ -109,8 +109,7 @@ export async function getDatabase() : Promise<IDBOpenDBRequest> {
             const messagesStore = db.result.createObjectStore(
                 StoreName.MessagesStore,
                 {
-                    keyPath: 'messageId',
-                    autoIncrement: true
+                    keyPath: 'messageId'
                 });
             messagesStore.createIndex(
                 'conversationId',

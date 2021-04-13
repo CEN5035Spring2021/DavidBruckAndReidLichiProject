@@ -11,21 +11,21 @@
 
     $: conversationSelected = conversation
         ? $selectedConversation === conversation
-        : ($selectedUsers as IOrganizationUser[]).some(
-            selectedUser => selectedUser === user);
+        : ($selectedUsers as string[]).some(
+            selectedUser => selectedUser === user.emailAddress);
 
     $: combinedClass =
         `${clazz}${conversationSelected ? ' selected' : ''}${notInConversation ? ' notInConversation' : ''}`;
 
     $: usersEmailAddresses = conversation
-        ? conversation.users.map(user => user.emailAddress).join(', ')
+        ? conversation.users.join(', ')
         : user.emailAddress;
 
     const selectConversation = () =>
         !conversationSelected
             && (conversation
                 ? $selectedConversation = conversation
-                : $selectedUsers = [ user ]);
+                : $selectedUsers = [ user.emailAddress ]);
 </script>
 
 <div class={ combinedClass } on:click={ selectConversation }>

@@ -1,13 +1,17 @@
 import 'expect-puppeteer';
 import { simpleParser } from 'mailparser';
+import type { Page } from 'puppeteer/lib/cjs/puppeteer/api-docs-entry';
 import { waitForEmail } from '../modules/smtpCoordinator';
 
-describe('Confirming user selects group', () => {
-    const EMAIL_ADDRESS = 'user-confirmation-selects-group@cen.5035';
-    const ORGANIZATION_NAME = 'Organization - user confirmation test';
-    const GROUP_NAME = 'Group - user confirmation test';
-    const GROUP_USER_EMAIL_ADDRESS = 'user-confirmation-selects-group2@cen.5035';
+describe('Sending and receiving messages notifies immediately', () => {
+    const EMAIL_ADDRESS = 'sending-and-receiving-messages-notifies-immediately@cen.5035';
+    const GROUP_USER_EMAIL_ADDRESS = 'sending-and-receiving-messages-notifies-immediately2@cen.5035';
+    const ORGANIZATION_NAME = 'Organization - messages test';
+    const GROUP_NAME = 'Group - messages test';
+    const MESSAGE_TO_USER2 = 'User 1->2 ping';
+    const MESSAGE_TO_USER1 = 'User 2->1 pong';
 
+    let page2: Page | undefined;
     beforeEach(async() => {
         await page.goto('http://localhost:5000');
         await page.waitForSelector(
@@ -61,7 +65,7 @@ describe('Confirming user selects group', () => {
                 timeout: 30000
             });
 
-        const email = await simpleParser(
+        let email = await simpleParser(
             await emailReceived);
 
         if (email.text) {
@@ -161,40 +165,40 @@ describe('Confirming user selects group', () => {
                 timeout: 30000
             });
 
-        await page.reload();
-        await page.waitForSelector(
+        page2 = await browser.newPage();
+
+        await page2.goto('http://localhost:5000');
+        await page2.waitForSelector(
             '.modal',
             {
                 hidden: true,
                 timeout: 30000
             });
 
-        createNewUser = await page.$('button');
+        createNewUser = await page2.$('button');
 
         await createNewUser?.click();
 
-        emailInput = await page.$('[ id="newEmail" ]');
-        passwordInput = await page.$('[ id="newPassword" ]');
-        confirmPasswordInput = await page.$('[ id="confirmPassword" ]');
+        emailInput = await page2.$('[ id="newEmail" ]');
+        passwordInput = await page2.$('[ id="newPassword" ]');
+        confirmPasswordInput = await page2.$('[ id="confirmPassword" ]');
         password = 'MyT3stP@ss2';
 
         await emailInput?.type(GROUP_USER_EMAIL_ADDRESS);
         await passwordInput?.type(password);
         await confirmPasswordInput?.type(password);
 
-        createUserButton = await page.$(createUserButtonSelector);
+        createUserButton = await page2.$(createUserButtonSelector);
 
         await createUserButton?.click();
-        await page.waitForSelector(
+        await page2.waitForSelector(
             createUserButtonSelector,
             {
                 hidden: true,
                 timeout: 30000
             });
-    });
 
-    it('Confirming user selects group', async() => {
-        const email = await simpleParser(
+        email = await simpleParser(
             await waitForEmail(GROUP_USER_EMAIL_ADDRESS));
 
         if (email.text) {
@@ -203,25 +207,154 @@ describe('Confirming user selects group', () => {
                 .substr(email.text.search(linkHeader) + linkHeader.length)
                 .trim();
 
-            await page.goto(link);
+            await page2.goto(link);
         }
 
-        await expect(page).toMatch(
+        await expect(page2).toMatch(
             'User added to group',
             {
                 timeout: 30000
             });
 
-        const closeAddedGroup = await page.$('.modal > span');
+        const closeAddedGroup = await page2.$('.modal > span');
 
         await closeAddedGroup?.click();
 
-        const selectedOrganization = await page.$('div.organizations > div.items > ul > li.selected');
+        await page.bringToFront();
 
-        await expect(selectedOrganization).toMatch(ORGANIZATION_NAME);
+        const inviteSelfToGroup = await page.$('.modal > div > ul > li');
 
-        const selectedGroup = await page.$('div.groups > div.items > ul > li.selected');
+        await inviteSelfToGroup?.click();
 
-        await expect(selectedGroup).toMatch(GROUP_NAME);
+        await expect(page).toMatch(
+            'Created',
+            {
+                timeout: 30000
+            });
+
+        const closeNewGroupUser = await page.$('.modal > span');
+
+        await closeNewGroupUser?.click();
+
+        const user2 = await page.$x(`//div[contains(text(), '${GROUP_USER_EMAIL_ADDRESS}')]`);
+
+        expect(user2.length).toBe(1);
+
+        await user2[0].click();
+
+        let messageTextarea = await page.$('.conversations > textarea');
+
+        await messageTextarea?.type(MESSAGE_TO_USER2);
+
+        let sendMessage = await page.$('.conversations > input');
+
+        await sendMessage?.click();
+
+        await expect(page).toMatch(
+            `${EMAIL_ADDRESS}:`,
+            {
+                timeout: 30000
+            });
+
+        await page2.bringToFront();
+
+        await page2.waitForFunction(
+            (emailAddress : string) => {
+                const firstGroupDiv = document.querySelector('div.groups > div > ul > li > hr + div');
+                if (!firstGroupDiv) {
+                    return false;
+                }
+                const groupDivChildren = firstGroupDiv.childNodes;
+                for (let groupDivChildIdx = 0, groupDivChildrenLength = groupDivChildren.length;
+                    groupDivChildIdx < groupDivChildrenLength;
+                    groupDivChildIdx++) {
+                    const groupDivChild = groupDivChildren[groupDivChildIdx];
+                    if (groupDivChild.nodeType === 3 // TextNode
+                        && groupDivChild.nodeValue
+                        && groupDivChild.nodeValue.trim() === emailAddress) {
+                        return true;
+                    }
+                }
+            },
+            {
+                timeout: 30000
+            },
+            EMAIL_ADDRESS);
+
+        const user1 = await page2.$x(`//div[contains(text(), '${EMAIL_ADDRESS}')]`);
+
+        expect(user1.length).toBe(1);
+
+        await user1[0].click();
+
+        await expect(page2).toMatch(
+            `${EMAIL_ADDRESS}:`,
+            {
+                timeout: 30000
+            });
+
+        messageTextarea = await page2.$('.conversations > textarea');
+
+        await messageTextarea?.type(MESSAGE_TO_USER1);
+
+        sendMessage = await page2.$('.conversations > input');
+
+        await sendMessage?.click();
+
+        await expect(page2).toMatch(
+            `${GROUP_USER_EMAIL_ADDRESS}:`,
+            {
+                timeout: 30000
+            });
+    });
+
+    it('When an existing user is added to a group, they see the new group', async() => {
+
+        const messageFromUser1 = await page2?.$x(`//li[contains(text(), '${MESSAGE_TO_USER2}')]`);
+
+        expect(messageFromUser1?.length).toBe(1);
+
+        const messageToUser1 = await page2?.$x(`//li[contains(text(), '${MESSAGE_TO_USER1}')]`);
+
+        expect(messageToUser1?.length).toBe(1);
+
+        await page.bringToFront();
+
+        await page.waitForFunction(
+            (emailAddress : string) => {
+                const firstGroupDiv = document.querySelector('div.groups > div > ul > li > hr + div');
+                if (!firstGroupDiv) {
+                    return false;
+                }
+                const groupDivChildren = firstGroupDiv.childNodes;
+                for (let groupDivChildIdx = 0, groupDivChildrenLength = groupDivChildren.length;
+                    groupDivChildIdx < groupDivChildrenLength;
+                    groupDivChildIdx++) {
+                    const groupDivChild = groupDivChildren[groupDivChildIdx];
+                    if (groupDivChild.nodeType === 3 // TextNode
+                        && groupDivChild.nodeValue
+                        && groupDivChild.nodeValue.trim() === emailAddress) {
+                        return true;
+                    }
+                }
+            },
+            {
+                timeout: 30000
+            },
+            GROUP_USER_EMAIL_ADDRESS);
+
+        const messageToUser2 = await page?.$x(`//li[contains(text(), '${MESSAGE_TO_USER2}')]`);
+
+        expect(messageToUser2?.length).toBe(1);
+
+        await expect(page).toMatch(
+            `${GROUP_USER_EMAIL_ADDRESS}:`,
+            {
+                timeout: 30000
+            });
+
+        const messageFromUser2 = await page?.$x(`//li[contains(text(), '${MESSAGE_TO_USER1}')]`);
+
+        expect(messageFromUser2?.length).toBe(1);
     });
 });

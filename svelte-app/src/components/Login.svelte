@@ -17,6 +17,7 @@
     import { globalFeedback, subscribePleaseWait } from '../stores/globalFeedback';
     import { api } from '../modules/api';
     import { connectSignalR } from '../modules/signalR';
+    import fetchMessages from '../modules/fetchMessages';
 
     let clazz: string;
     export { clazz as class };
@@ -234,6 +235,11 @@
                 $emailAddress = existingUser.emailAddress; // In case the email address had different casing
 
                 await connectSignalR(existingUser.emailAddress);
+                if (tempOrganizations.length) {
+                    await fetchMessages({
+                        signingPrivateKey: tempSigningPrivateKey
+                    });
+                }
 
                 $encryptionPrivateKey = tempEncryptionPrivateKey;
                 $encryptionPublicKey = tempEncryptionPublicKey;

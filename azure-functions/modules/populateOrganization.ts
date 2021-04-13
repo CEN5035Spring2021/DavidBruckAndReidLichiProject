@@ -1,6 +1,6 @@
 import type { ContainerResponse, DatabaseResponse, QueryIterator, Resource } from '@azure/cosmos';
 import {
-    getGroupUsersContainer, getIdParamName, getOrganizationsContainer, getOrganizationUsersContainer
+    getGroupsContainer, getGroupUsersContainer, getIdParamName, getOrganizationsContainer, getOrganizationUsersContainer
 } from './database';
 import type { Group, GroupUser, Organization, OrganizationUser, User } from './serverInterfaces';
 
@@ -62,6 +62,7 @@ export async function populateOrganization(
     });
 
     await populateGroupUsers({
+        database,
         groupUsers,
         usersToGroups,
         existingGroups
@@ -97,29 +98,13 @@ export async function populateOrganizationUsers(
     if (includeAdminUser) {
         userIds.add(includeAdminUser);
     }
-    if (!userIds.size) {
-        return {
-            users: []
-        };
-    }
-
-    const usersReader = users.container.items.query({
-        query: `SELECT * FROM root r WHERE r.id IN (${
-            [ ...Array(userIds.size).keys() ]
-                .map(getIdParamName)
-                .join(',')
-        })`,
-        parameters: [ ...userIds ].map(
-            ((id, userOrdinal) => ({
-                name: getIdParamName(userOrdinal),
-                value: id
-            })))
-    }) as QueryIterator<User & Resource>;
 
     let adminUser: string | undefined;
     let existingUsers: UserResponse[] | undefined;
-    do {
-        for (const existingUser of (await usersReader.fetchNext()).resources) {
+    await forEachUser({
+        users,
+        userIds,
+        callback: existingUser => {
             const organizations = usersToOrganizations.get(existingUser.id);
             if (organizations) {
                 for (const organization of organizations) {
@@ -157,7 +142,7 @@ export async function populateOrganizationUsers(
                 adminUser = existingUser.emailAddress;
             }
         }
-    } while (usersReader.hasMoreResults());
+    });
 
     // Using Order By in the database queries won't work because we query multiple collections
     // in batches so it might grab earlier-ordered organizations / users in a subsequent batch.
@@ -172,8 +157,38 @@ export async function populateOrganizationUsers(
     return {
         adminIdx: adminUser && existingUsers?.findIndex(
             existingUser => existingUser.emailAddress === adminUser),
-        users: existingUsers
+        users: existingUsers || []
     };
+}
+
+export async function forEachUser(
+    { users, userIds, callback } : {
+        users: ContainerResponse;
+        userIds: Set<string> | Map<string, GroupResponse[]>;
+        callback: (user: User & Resource) => void;
+    }) : Promise<void> {
+    if (!userIds.size) {
+        return;
+    }
+
+    const usersReader = users.container.items.query({
+        query: `SELECT * FROM root r WHERE r.id IN (${
+            [ ...Array(userIds.size).keys() ]
+                .map(getIdParamName)
+                .join(',')
+        })`,
+        parameters: [ ...userIds.keys() ].map(
+            ((id, userOrdinal) => ({
+                name: getIdParamName(userOrdinal),
+                value: id
+            })))
+    }) as QueryIterator<User & Resource>;
+
+    do {
+        for (const existingUser of (await usersReader.fetchNext()).resources) {
+            callback(existingUser);
+        }
+    } while (usersReader.hasMoreResults());
 }
 
 export async function getExistingOrganization(
@@ -200,6 +215,38 @@ export async function getExistingOrganization(
             return organization;
         }
     } while (organizationsReader.hasMoreResults());
+}
+
+export async function getExistingGroup(
+    { database, groups, organizationId, name } : {
+        database: DatabaseResponse;
+        groups?: ContainerResponse;
+        organizationId: string;
+        name: string;
+    }) : Promise<Group & Resource | undefined> {
+
+    const ORGANIZATION_ID_NAME = '@organizationId';
+    const NAME_NAME = '@name';
+    const groupsReader = (groups || await getGroupsContainer(database)).container.items.query({
+        query: `SELECT * FROM root r WHERE r.organizationId = ${ORGANIZATION_ID_NAME} AND r.name = ${NAME_NAME}`,
+        parameters: [
+            {
+                name: ORGANIZATION_ID_NAME,
+                value: organizationId
+            },
+            {
+                name: NAME_NAME,
+                value: name
+            }
+        ]
+    }) as QueryIterator<Group & Resource>;
+
+    do {
+        const { resources } = await groupsReader.fetchNext();
+        for (const group of resources) {
+            return group;
+        }
+    } while (groupsReader.hasMoreResults());
 }
 
 export async function getOrganizationAdmin(
@@ -433,9 +480,10 @@ async function populateOrganizationGroups(
     } while (groupsReader.hasMoreResults());
 }
 
-async function populateGroupUsers(
-    { groupUsers, usersToGroups, existingGroups } : {
-        groupUsers: ContainerResponse;
+export async function populateGroupUsers(
+    { database, groupUsers, usersToGroups, existingGroups } : {
+        database: DatabaseResponse;
+        groupUsers?: ContainerResponse;
         usersToGroups: Map<string, GroupResponse[]>;
         existingGroups: Map<string, GroupResponse>;
     }) : Promise<void> {
@@ -443,7 +491,7 @@ async function populateGroupUsers(
         return;
     }
 
-    const groupUsersReader = groupUsers.container.items.query({
+    const groupUsersReader = (groupUsers || await getGroupUsersContainer(database)).container.items.query({
         query: `SELECT * FROM root r WHERE r.groupId IN (${
             [ ...Array(existingGroups.size).keys() ]
                 .map(getIdParamName)

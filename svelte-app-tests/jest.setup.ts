@@ -37,6 +37,28 @@ const takeScreenshot = async() => {
             `${path.basename(testPath).slice(0, 0 - path.extname(testPath).length)}.png`)
     });
 };
+// // Multiple screenshot version below, but the browser is shared with multiple tests,
+// // so the pages captured might include other tests than the failing one, best used with
+// // Jest option --runInBand
+//
+// const takeScreenshot = async() => {
+//     const testPath = expect.getState().testPath;
+//     await new Promise<void>(
+//         (resolve, reject) => fs.mkdir(
+//             path.join(failureScreenshotsDir),
+//             {
+//                 recursive: true
+//             },
+//             err => err ? reject(err) : resolve()));
+//     const screenshotBasePath = path.join(
+//         failureScreenshotsDir,
+//         path.basename(testPath).slice(0, 0 - path.extname(testPath).length));
+//     for (const [ pageIdx, browserPage ] of (await browser.pages()).entries()) {
+//         await browserPage.screenshot({
+//             path: `${screenshotBasePath}_${pageIdx}.png`
+//         });
+//     }
+// };
 
 let screenshotPromise = Promise.resolve();
 beforeEach(() => screenshotPromise);

@@ -17,8 +17,8 @@
         ? clazz
         : `${clazz} conversations`;
 
-    $: usersEmailAddresses = ($conversationUsers as IOrganizationUser[]).length
-        ? ($conversationUsers as IOrganizationUser[]).map(conversationUser => conversationUser.emailAddress).join(', ')
+    $: usersEmailAddresses = ($conversationUsers as string[]).length
+        ? ($conversationUsers as string[]).join(', ')
         : ($groupUsers as IOrganizationUser[]).length ? 'Start a conversation' : '';
     $: conversationUsersLength = ($conversationUsers as IOrganizationUser[]).length;
 

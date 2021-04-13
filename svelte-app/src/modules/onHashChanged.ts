@@ -237,20 +237,12 @@ async function groupUserConfirmation(
                 const tempOrganization = {
                     name: response.organization.name,
                     admin: response.organization.admin,
-                    users: response.organization.users?.map(
-                        emailAddress => {
-                            if (!emailAddress) {
-                                throw new Error('Server returned an organization user without an email address');
-                            }
-                            const encryptionPublicKey = usersToEncryptionKey.get(emailAddress);
-                            if (!encryptionPublicKey) {
-                                throw new Error('Server returned an organization user without an encryption key');
-                            }
-                            return {
-                                emailAddress,
-                                encryptionPublicKey
-                            };
-                        }),
+                    users: [ ...usersToEncryptionKey.entries() ].map(
+                        ([ emailAddress, encryptionPublicKey ]) => ({
+                            emailAddress,
+                            encryptionPublicKey
+                        })
+                    ),
                     groups: response.organization.groups?.map(
                         organizationGroup => {
                             if (!organizationGroup || !organizationGroup.name) {
