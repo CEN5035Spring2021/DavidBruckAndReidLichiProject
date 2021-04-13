@@ -2,6 +2,7 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import { unconditionalMessage, showUnconditionalMessage, globalFeedback } from '../stores/globalFeedback';
 import { runUnderOrganizationStore } from '../stores/organization';
 import { api } from './api';
+import fetchMessages from './fetchMessages';
 import getDefaultFunctionsUrl from './getFunctionsUrl';
 import type { NewGroupUserMessage, SignalRConnectionInfo } from './serverInterfaces';
 
@@ -35,6 +36,7 @@ export async function connectSignalR(xMsClientPrincipalName: string) : Promise<v
     });
 
     hubConnection.on('newGroupUser', onNewGroupUser);
+    hubConnection.on('newMessage', onNewMessage);
 
     await hubConnection.start();
 }
@@ -52,6 +54,16 @@ function onNewGroupUser(message: NewGroupUserMessage) : void {
             ...feedback,
             {
                 message: 'Error in onNewGroupUser: ' +
+                    (reason && (reason as { message: string }).message || reason as string)
+            }
+        ]));
+}
+function onNewMessage() : void {
+    fetchMessages({}).catch(reason =>
+        globalFeedback.update(feedback => [
+            ...feedback,
+            {
+                message: 'Error in onNewMessage: ' +
                     (reason && (reason as { message: string }).message || reason as string)
             }
         ]));

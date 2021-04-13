@@ -7,29 +7,34 @@ import type { IConversation } from './group';
 
 const STRING_START = 0;
 
-export interface IMessage extends IMessageBase {
-    sender: string;
-    conversationId: string;
-    date: number;
-}
-export interface IMessageBase {
+export interface IMessage {
+    messageId: string;
     encryptedMessage: string;
     encryptedKey: string;
+    sender: string;
+    conversationId: string;
+    date: string;
 }
 
 export class MessagesStore extends Store {
-    public async append(
-        { conversationId, message } : {
-            conversationId: string;
-            message: IMessage;
-        }): Promise<void> {
+    public async append(message: IMessage): Promise<void> {
+        const getExistingMessage = this._store.get(message.messageId) as IDBRequest<IMessage>;
+        const existingMessage = await new Promise((resolve, reject) => {
+            getExistingMessage.onsuccess = () => resolve(getExistingMessage.result);
+            getExistingMessage.onerror = () => reject(getExistingMessage.error);
+        });
+
+        if (existingMessage) {
+            return;
+        }
+
         const putRequest = this._store.put(message);
         await new Promise((resolve, reject) => {
             putRequest.onsuccess = resolve;
             putRequest.onerror = () => reject(putRequest.error);
         });
 
-        if (conversationId === get(selectedConversation)?.id) {
+        if (message.conversationId === get(selectedConversation)?.id) {
             messages.update(value => [ ...value, message ]);
         }
     }

@@ -46,3 +46,14 @@ export interface GroupUserConfirmation {
     groupId: string;
     lowercasedEmailAddress: string;
 }
+export interface Message {
+    id: string;
+    organizationId: string;
+    groupId: string;
+    userId: string;
+    otherUserIds: string[];
+    senderId: string;
+    encryptedMessage: string;
+    encryptedKey: string;
+    date: string;
+}

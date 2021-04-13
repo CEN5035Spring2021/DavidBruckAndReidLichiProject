@@ -12,6 +12,7 @@ const GREATER = 1;
 const EQUALS = 0;
 const LESS = -1;
 const ARRAY_START = 0;
+const NOT_FOUND = -1;
 
 export class ConversationStore extends Store {
     public async append({ organizationName, groupName, conversation } : {
@@ -22,7 +23,8 @@ export class ConversationStore extends Store {
         const localSupportsCompositeKey = await SettingsStore.supportsCompositeKey();
         const lowercasedEmailAddress = get(emailAddress).toLowerCase();
 
-        if (get(selectedOrganization) === organizationName) {
+        const existingOrganizationName = get(selectedOrganization);
+        if (existingOrganizationName === organizationName) {
             const existingGroup = get(organizationGroups).find(
                 organizationGroup => organizationGroup.name === groupName);
             if (existingGroup) {
@@ -32,6 +34,9 @@ export class ConversationStore extends Store {
                 });
                 if (existingConversationId) {
                     return existingConversationId;
+                }
+                for (const conversationsUpdateListener of conversationsUpdateListeners) {
+                    conversationsUpdateListener();
                 }
             }
         }
@@ -85,9 +90,22 @@ export class ConversationStore extends Store {
     }
 }
 
+const conversationsUpdateListeners: Array<() => void> = [];
+
 export const conversations = readable<IConversation[]>(
     [],
-    set => selectedGroup.subscribe(value => set(value?.conversations || [])));
+    set => {
+        const conversationsUpdateListener = () => set(get(selectedGroup).conversations || []);
+        conversationsUpdateListeners.push(conversationsUpdateListener);
+        const unsubscribe = selectedGroup.subscribe(value => value && set(value?.conversations || []));
+        return () => {
+            const conversationsUpdateListenerIdx = conversationsUpdateListeners.indexOf(conversationsUpdateListener);
+            if (conversationsUpdateListenerIdx > NOT_FOUND) {
+                conversationsUpdateListeners.splice(conversationsUpdateListenerIdx, 1);
+            }
+            unsubscribe();
+        };
+    });
 export const usersNotInConversation = readable<IOrganizationUser[]>(
     [],
     set => {
@@ -97,7 +115,7 @@ export const usersNotInConversation = readable<IOrganizationUser[]>(
             }
             const usersInConversation = new Set(
                 conversations
-                    .reduce<IOrganizationUser[]>(
+                    .reduce<string[]>(
                         (previousValue, currentValue) => {
                             if (currentValue.users) {
                                 return [ ...previousValue, ...currentValue.users ];
@@ -105,7 +123,7 @@ export const usersNotInConversation = readable<IOrganizationUser[]>(
                             return previousValue;
                         },
                         [])
-                    .map(organizationUser => organizationUser.emailAddress.toLowerCase()));
+                    .map(organizationUser => organizationUser.toLowerCase()));
             return users.filter(user => !usersInConversation.has(user.emailAddress.toLowerCase()));
         };
         const conversationsSubscription = conversations.subscribe(value =>
@@ -119,8 +137,8 @@ export const usersNotInConversation = readable<IOrganizationUser[]>(
     });
 
 export const selectedConversation = writable<IConversation>(null);
-export const selectedUsers = writable<IOrganizationUser[]>([]);
-export const conversationUsers = writable<IOrganizationUser[]>(
+export const selectedUsers = writable<string[]>([]);
+export const conversationUsers = writable<string[]>(
     getConversationUsers(get(selectedConversation), get(selectedUsers)));
 export function runUnderConversationStore<TState, TResult>(
     callback: (ConversationStore: ConversationStore, state: TState) => Promise<TResult>,
@@ -133,7 +151,7 @@ export function runUnderConversationStore<TState, TResult>(
         state
     });
 }
-function getConversationUsers(selectedConversation: IConversation, selectedUsers?: IOrganizationUser[]) {
+function getConversationUsers(selectedConversation: IConversation, selectedUsers?: string[]) {
     return selectedConversation
         ? selectedConversation.users
         : selectedUsers || [];
@@ -185,7 +203,7 @@ function appendConversation({ group, conversation } : {
     const existingConversation = group.conversations?.find(
         existingConversation => existingConversation.users.length === conversation.users.length
             && existingConversation.users.every(
-                (value, index) => value.emailAddress === conversation.users[index].emailAddress));
+                (value, index) => value === conversation.users[index]));
     if (existingConversation) {
         return existingConversation.id;
     }
@@ -204,15 +222,15 @@ function appendConversation({ group, conversation } : {
 }
 function usersOrder(
     { a, b, idx } : {
-        a: IOrganizationUser[];
-        b: IOrganizationUser[];
+        a: string[];
+        b: string[];
         idx: number;
     }) : number {
     if (idx >= a.length) {
         return EQUALS;
     }
-    const aLowercased = a[idx].emailAddress.toLowerCase();
-    const bLowercased = b[idx].emailAddress.toLowerCase();
+    const aLowercased = a[idx].toLowerCase();
+    const bLowercased = b[idx].toLowerCase();
     return aLowercased > bLowercased
         ? GREATER
         : (aLowercased < bLowercased

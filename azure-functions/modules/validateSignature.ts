@@ -85,6 +85,7 @@ export async function getValidatedUser<T extends IUser>(
         emailAddress: string | undefined;
         database: DatabaseResponse;
         users: ContainerResponse;
+        time: string;
     }> {
 
     if (body == null) {
@@ -140,6 +141,7 @@ export async function getValidatedUser<T extends IUser>(
         userId,
         emailAddress,
         database: ensuredDatabase,
-        users: ensuredUsers
+        users: ensuredUsers,
+        time
     };
 }

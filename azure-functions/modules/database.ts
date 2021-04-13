@@ -109,6 +109,17 @@ export function getGroupUserConfirmationsContainer(database: DatabaseResponse) :
     });
 }
 
+export function getMessagesContainer(database: DatabaseResponse) : Promise<ContainerResponse> {
+    return database.database.containers.createIfNotExists({
+        id: 'Messages',
+        partitionKey: {
+            paths: [
+                '/userId'
+            ]
+        }
+    });
+}
+
 export function getIdParamName(organizationOrdinal: number): string {
     return `@id${organizationOrdinal}`;
 }

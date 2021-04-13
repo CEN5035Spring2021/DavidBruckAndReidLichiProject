@@ -19,7 +19,7 @@ export interface IHasGroups {
 }
 export interface IConversation {
     id: string;
-    users: IOrganizationUser[];
+    users: string[];
 }
 
 export class GroupStore extends Store {

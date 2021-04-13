@@ -126,6 +126,12 @@ describe('Creating group user sends email', () => {
 
         await createGroupButton?.click();
 
+        await expect(page).not.toMatch(
+            'Creating group...',
+            {
+                timeout: 30000
+            });
+
         await expect(page).toMatch(
             'Created',
             {

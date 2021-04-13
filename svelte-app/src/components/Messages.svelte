@@ -1,21 +1,28 @@
 <script lang=ts>
     import OpenCrypto from 'opencrypto';
     import { onMount } from 'svelte';
-    import { conversationUsers, runUnderConversationStore } from '../stores/conversation';
+    import {
+        conversationUsers, runUnderConversationStore, conversations, selectedConversation
+    } from '../stores/conversation';
     import { globalFeedback } from '../stores/globalFeedback';
-    import type { IMessage, IMessageBase } from '../stores/messages';
+    import type { IMessage } from '../stores/messages';
     import { runUnderMessagesStore, messages } from '../stores/messages';
-    import type { IOrganizationUser } from '../stores/user';
     import { encryptionPublicKey } from '../stores/user';
     import { emailAddress } from '../stores/user';
-    import { v4 } from 'uuid';
+    import { v4 as uuidV4 } from 'uuid';
     import { selectedOrganization } from '../stores/organization';
-    import type { IGroup } from '../stores/group';
+    import type { IConversation, IGroup } from '../stores/group';
     import { selectedGroup } from '../stores/group';
     import Message from './Message.svelte';
+    import { api } from '../modules/api';
+    import getDefaultFunctionsUrl from '../modules/getFunctionsUrl';
+    import type { SendMessageRequest } from '../modules/serverInterfaces';
+    import { SendMessageResponse } from '../modules/serverInterfaces';
+    import { sign } from '../modules/sign';
 
     const AES_LENGTH = 256;
     const NO_WAIT = 0;
+    const POST = 'POST';
 
     let messageInput: HTMLTextAreaElement;
     let message = '';
@@ -27,11 +34,14 @@
     const sendMessage = async() => {
         sendingMessage = true;
         try {
-            const recipients = ($conversationUsers as IOrganizationUser[]);
+            const recipients = ($conversationUsers as string[]);
             const organizationName = $selectedOrganization as string;
-            const groupName = ($selectedGroup as IGroup).name;
+            const group = ($selectedGroup as IGroup);
+            const groupName = group.name;
             const selfMessageOnly =
-                recipients[0].emailAddress.toLowerCase() === ($emailAddress as string).toLowerCase();
+                recipients[0].toLowerCase() === ($emailAddress as string).toLowerCase();
+            const recipientsToEncryptionKeys = new Map<string, string>(
+                group.users.map(user => [ user.emailAddress, user.encryptionPublicKey ]));
 
             const crypt = new OpenCrypto();
             const sharedKey = await crypt.getSharedKey(
@@ -46,33 +56,30 @@
                     ],
                     isExtractable: true
                 }) as CryptoKey;
-            const groupMessages: Array<{ message: IMessageBase; recipient: string }> = [];
+            const groupMessages: Array<{ encryptedKey: string; recipient: string }> = [];
             const encryptedMessage = await crypt.encrypt(
                 sharedKey,
                 new TextEncoder().encode(message)) as string;
 
             for (const recipient of recipients) {
                 groupMessages.push({
-                    message: {
-                        encryptedMessage,
-                        encryptedKey: await crypt.encryptKey(
-                            await crypt.pemPublicToCrypto(
-                                recipient.encryptionPublicKey,
-                                {
-                                    name: 'RSA-OAEP',
-                                    hash: 'SHA-512',
-                                    usages: [
-                                        'encrypt',
-                                        'wrapKey'
-                                    ]
-                                }) as CryptoKey,
-                            sharedKey) as string
-                    },
-                    recipient: recipient.emailAddress
+                    encryptedKey: await crypt.encryptKey(
+                        await crypt.pemPublicToCrypto(
+                            recipientsToEncryptionKeys.get(recipient),
+                            {
+                                name: 'RSA-OAEP',
+                                hash: 'SHA-512',
+                                usages: [
+                                    'encrypt',
+                                    'wrapKey'
+                                ]
+                            }) as CryptoKey,
+                        sharedKey) as string,
+                    recipient
                 });
             }
 
-            let conversationId = v4();
+            let conversationId = uuidV4();
             const existingConversationId = await runUnderConversationStore(store => store.append({
                 organizationName,
                 groupName,
@@ -84,16 +91,27 @@
             if (existingConversationId) {
                 conversationId = existingConversationId;
             }
+            if (($selectedConversation as IConversation)?.id !== conversationId) {
+                for (const conversation of ($conversations as IConversation[])) {
+                    if (conversation.id === conversationId) {
+                        $selectedConversation = conversation;
+                        break;
+                    }
+                }
+            }
 
-            const now = new Date().getTime();
+            const now = new Date().getTime().toString();
             const selfMessage: IMessage = selfMessageOnly
                 ? {
+                    messageId: uuidV4(),
                     sender: $emailAddress as string,
                     conversationId,
                     date: now,
-                    ...groupMessages[0].message
+                    encryptedMessage,
+                    encryptedKey: groupMessages[0].encryptedKey
                 }
                 : {
+                    messageId: uuidV4(),
                     sender: $emailAddress as string,
                     conversationId,
                     date: now,
@@ -104,13 +122,33 @@
                 };
 
             if (!selfMessageOnly) {
-                throw new Error('TODO: Sending messages to other users');
+                const url = `${getDefaultFunctionsUrl()}api/sendmessage`;
+                const request = await sign<SendMessageRequest>({
+                    url,
+                    method: POST,
+                    body: {
+                        organization: organizationName,
+                        group: groupName,
+                        userMessages: groupMessages.map(groupMessage => ({
+                            emailAddress: groupMessage.recipient,
+                            encryptedKey: groupMessage.encryptedKey
+                        })),
+                        encryptedMessage,
+                        emailAddress: $emailAddress as string
+                    },
+                    crypt
+                });
+                const response = await api<SendMessageResponse>({
+                    method: POST,
+                    url,
+                    body: request
+                });
+                if (response !== SendMessageResponse.Sent) {
+                    throw new Error(`Unexpected server response type ${response as string}`);
+                }
             }
 
-            await runUnderMessagesStore(store => store.append({
-                conversationId,
-                message: selfMessage
-            }));
+            await runUnderMessagesStore(store => store.append(selfMessage));
 
             message = '';
             setTimeout(

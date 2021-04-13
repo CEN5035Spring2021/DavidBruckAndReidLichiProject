@@ -9,16 +9,12 @@
     import AddUserToConversation from './AddUserToConversation.svelte';
 
     export let close: () => void;
-    export let conversationUsers: Writable<IOrganizationUser[]>;
+    export let conversationUsers: Writable<string[]>;
 
-    const GREATER = 1;
-    const EQUALS = 0;
-    const LESS = -1;
-    const editableConversationUsers = writable<IOrganizationUser[]>($conversationUsers);
+    const editableConversationUsers = writable<string[]>($conversationUsers as string[]);
 
-    $: usersEmailAddresses = ($editableConversationUsers as IOrganizationUser[]).length
-        ? ($editableConversationUsers as IOrganizationUser[])
-            .map(conversationUser => conversationUser.emailAddress).join(', ')
+    $: usersEmailAddresses = ($editableConversationUsers as string[]).length
+        ? ($editableConversationUsers as string[]).join(', ')
         : 'Add a user to the conversation';
 
     $: unAddedConversationUsers = ($groupUsers as IOrganizationUser[]).filter(
@@ -28,23 +24,21 @@
                 && !conversationUserEmailAddresses.has(valueEmailAddressLowerCase);
         }).bind(
             null,
-            new Set(($editableConversationUsers as IOrganizationUser[])
-                .map(conversationUser => conversationUser.emailAddress.toLowerCase()))));
-    $: unAddedConversationUsersLength = (unAddedConversationUsers as IOrganizationUser[]).length;
-    $: editableConversationUsersLength = ($editableConversationUsers as IOrganizationUser[]).length;
+            new Set(($editableConversationUsers as string[])
+                .map(conversationUser => conversationUser.toLowerCase()))))
+        .map(unAddedConversationUser => unAddedConversationUser.emailAddress);
+    $: unAddedConversationUsersLength = (unAddedConversationUsers as string[]).length;
+    $: editableConversationUsersLength = ($editableConversationUsers as string[]).length;
 
-    const addUserToConversation = (user: IOrganizationUser) =>
+    const addUserToConversation = (user: string) =>
         editableConversationUsers.update(value =>
-            (value.length && value[0].emailAddress.toLowerCase() === ($emailAddress as string).toLowerCase())
+            (value.length && value[0].toLowerCase() === ($emailAddress as string).toLowerCase())
                 ? [ user ]
                 : [ ...value, user ]);
 
     const clear = () => $editableConversationUsers = [];
     const ok = () => {
-        $conversationUsers = [ ...($editableConversationUsers as IOrganizationUser[]) ].sort(
-            (a, b) => a.emailAddress === b.emailAddress
-                ? EQUALS
-                : (a.emailAddress > b.emailAddress ? GREATER : LESS));
+        $conversationUsers = [ ...($editableConversationUsers as string[]) ].sort();
         close();
     };
 

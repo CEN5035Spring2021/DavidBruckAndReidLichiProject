@@ -11,8 +11,9 @@ import {
     getOrganizationUsersContainer
 } from '../modules/database';
 import type { GroupResponse, OrganizationResponse, UserResponse } from '../modules/populateOrganization';
-import { populateOrganization, populateOrganizationUsers } from '../modules/populateOrganization';
-import { getExistingOrganization, getOrganizationAdmin } from '../modules/populateOrganization';
+import {
+    getExistingGroup, populateOrganization, populateOrganizationUsers, getExistingOrganization, getOrganizationAdmin
+} from '../modules/populateOrganization';
 import sendMail from '../modules/sendMail';
 
 interface CreateGroupUserRequest extends IUser {
@@ -49,7 +50,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         throw new Error('Missing request body');
     }
 
-    return  (body.confirmation ? handleConfirmation : handleNonConfirmation)({
+    return (body.confirmation ? handleConfirmation : handleNonConfirmation)({
         context,
         body,
         req
@@ -245,6 +246,7 @@ async function handleNonConfirmation(
 
     const groups = await getGroupsContainer(database);
     const group = await getExistingGroup({
+        database,
         groups,
         organizationId: organization.id,
         name: body.groupName
@@ -384,37 +386,6 @@ async function getExistingGroupUsers(
     } while (usersReader.hasMoreResults());
 
     return existingGroupUsers;
-}
-
-async function getExistingGroup(
-    { groups, organizationId, name } : {
-        groups: ContainerResponse;
-        organizationId: string;
-        name: string;
-    }) : Promise<Group & Resource | undefined> {
-
-    const ORGANIZATION_ID_NAME = '@organizationId';
-    const NAME_NAME = '@name';
-    const groupsReader = groups.container.items.query({
-        query: `SELECT * FROM root r WHERE r.organizationId = ${ORGANIZATION_ID_NAME} AND r.name = ${NAME_NAME}`,
-        parameters: [
-            {
-                name: ORGANIZATION_ID_NAME,
-                value: organizationId
-            },
-            {
-                name: NAME_NAME,
-                value: name
-            }
-        ]
-    }) as QueryIterator<Group & Resource>;
-
-    do {
-        const { resources } = await groupsReader.fetchNext();
-        for (const group of resources) {
-            return group;
-        }
-    } while (groupsReader.hasMoreResults());
 }
 
 async function getExistingUser(

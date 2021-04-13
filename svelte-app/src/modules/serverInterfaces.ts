@@ -73,3 +73,40 @@ export interface NewGroupUserMessage {
     emailAddress: string;
     encryptionKey: string;
 }
+export interface SendMessageRequest {
+    organization: string;
+    group: string;
+    userMessages: IUserMessage[];
+    encryptedMessage: string;
+    emailAddress: string;
+}
+export interface IUserMessage {
+    emailAddress: string;
+    encryptedKey: string;
+}
+export enum SendMessageResponse {
+    Sent = 'Sent'
+}
+export interface FetchMessagesRequest {
+    emailAddress: string;
+}
+export interface FetchMessagesResponse {
+    messages: MessageResponse[];
+}
+export interface MessageResponse {
+    messageId: string;
+    organization: string;
+    group: string;
+    users: string[];
+    sender: string;
+    encryptedMessage: string;
+    encryptedKey: string;
+    date: string;
+}
+export interface DeleteMessagesRequest {
+    messages: string[];
+    emailAddress: string;
+}
+export enum DeleteMessagesResponse {
+    Deleted = 'Deleted'
+}

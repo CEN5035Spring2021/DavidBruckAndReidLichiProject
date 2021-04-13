@@ -129,6 +129,12 @@ describe('When an existing user is added to a group, they see the new group', ()
 
         await createGroupButton?.click();
 
+        await expect(page).not.toMatch(
+            'Creating group...',
+            {
+                timeout: 30000
+            });
+
         await expect(page).toMatch(
             'Created',
             {
@@ -231,6 +237,12 @@ describe('When an existing user is added to a group, they see the new group', ()
             await page.$('.modal > div > input[ type="button" ][ value="Create group" ]');
 
         await createGroupButton?.click();
+
+        await expect(page).not.toMatch(
+            'Creating group...',
+            {
+                timeout: 30000
+            });
 
         await expect(page).toMatch(
             'Created',
