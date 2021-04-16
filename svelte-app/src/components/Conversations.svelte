@@ -84,7 +84,7 @@
             cursor: pointer;
         }
             h3.nonEmptyUsersEmailAddresses::before, h3.nonEmptyUsersEmailAddresses::after {
-                content: " ⊕ ";
+                content: " \2295 ";
                 font-weight: bolder;
                 color: #f5793a;
             }

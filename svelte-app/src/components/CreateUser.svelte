@@ -276,7 +276,7 @@
     }
 
     span::before {
-        content: "⚠";
+        content: "\26A0";
         font-size: 1.5em;
         font-weight: 700;
         color: #ff8c00;

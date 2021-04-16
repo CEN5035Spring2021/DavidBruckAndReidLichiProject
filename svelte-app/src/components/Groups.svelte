@@ -66,7 +66,7 @@
         white-space: nowrap;
     }
         button::before, button::after {
-            content: " ⊕ ";
+            content: " \2295 ";
             font-weight: bolder;
             color: #f5793a;
             vertical-align: baseline;
