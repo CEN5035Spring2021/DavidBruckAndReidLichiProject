@@ -105,7 +105,7 @@ async function getSignalRConnectionInfo(
             ? {
                 method,
                 url,
-                body: sign({
+                body: await sign({
                     method,
                     url,
                     body: body = {
