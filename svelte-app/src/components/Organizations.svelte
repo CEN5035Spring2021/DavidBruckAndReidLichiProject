@@ -58,7 +58,7 @@
         white-space: nowrap;
     }
         button::before, button::after {
-            content: " \2295 ";
+            content: "\00A0\2295\00A0";
             font-weight: bolder;
             color: #f5793a;
             vertical-align: baseline;

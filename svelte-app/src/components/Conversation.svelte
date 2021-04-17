@@ -5,7 +5,6 @@
 
     let clazz: string;
     export { clazz as class };
-    export let notInConversation = false;
     export let conversation: IConversation = undefined;
     export let user: IOrganizationUser = undefined;
 
@@ -15,7 +14,7 @@
             selectedUser => selectedUser === user.emailAddress);
 
     $: combinedClass =
-        `${clazz}${conversationSelected ? ' selected' : ''}${notInConversation ? ' notInConversation' : ''}`;
+        `${clazz}${conversationSelected ? ' selected' : ''}${user ? ' notInConversation' : ''}`;
 
     $: usersEmailAddresses = conversation
         ? conversation.users.join(', ')

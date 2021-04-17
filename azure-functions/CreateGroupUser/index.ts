@@ -185,7 +185,7 @@ async function handleConfirmation(
         if (userResponseLowercasedEmailAddress !== lowercasedEmailAddress
             && (groupUserEmailAddresses.has(userResponseLowercasedEmailAddress)
                 || userIdx === adminIdx)) {
-            signalRUsers.push(userResponse.emailAddress);
+            signalRUsers.push(userResponse.emailAddress.toLowerCase());
         }
     }
 
@@ -381,7 +381,7 @@ async function getExistingGroupUsers(
     do {
         const { resources } = await usersReader.fetchNext();
         for (const user of resources) {
-            existingGroupUsers.push(user.emailAddress);
+            existingGroupUsers.push(user.emailAddress.toLowerCase());
         }
     } while (usersReader.hasMoreResults());
 

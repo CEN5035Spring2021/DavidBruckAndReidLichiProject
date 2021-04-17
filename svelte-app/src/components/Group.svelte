@@ -28,7 +28,7 @@
             <Conversation { conversation } class=conversation />
         { /each }
         { #each $usersNotInConversation as user }
-            <Conversation { user } class=conversation notInConversation={ true } />
+            <Conversation { user } class=conversation />
         { /each }
         { #if $isOrganizationAdmin }
             <button on:click={ manageGroup }>Manage group</button>

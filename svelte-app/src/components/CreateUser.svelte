@@ -153,7 +153,7 @@
                 });
             }
 
-            await connectSignalR(localEmailAddress);
+            await connectSignalR(localEmailAddress.toLowerCase());
 
             $encryptionPrivateKey = encryptionKeyPair.privateKey;
             $encryptionPublicKey = encryptionKeyPair.publicKey;
