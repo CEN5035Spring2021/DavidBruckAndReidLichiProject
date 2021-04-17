@@ -117,7 +117,7 @@ export const usersNotInConversation = readable<IOrganizationUser[]>(
                 conversations
                     .reduce<string[]>(
                         (previousValue, currentValue) => {
-                            if (currentValue.users) {
+                            if (currentValue.users && currentValue.users.length === 1) {
                                 return [ ...previousValue, ...currentValue.users ];
                             }
                             return previousValue;
@@ -160,14 +160,26 @@ function getConversationUsers(selectedConversation: IConversation, selectedUsers
 selectedGroup.subscribe(() => {
     selectedConversation.set(null);
     selectedUsers.set([]);
+    conversationUsers.set([]);
 });
-selectedConversation.subscribe(conversation => conversation && selectedUsers.set([]));
-selectedUsers.subscribe(users => users.length && selectedConversation.set(null));
+selectedConversation.subscribe(conversation => {
+    if (!conversation) {
+        return;
+    }
 
-selectedConversation.subscribe(
-    value => conversationUsers.set(getConversationUsers(value, get(selectedUsers))));
-selectedUsers.subscribe(
-    value => conversationUsers.set(getConversationUsers(get(selectedConversation), value)));
+    const localSelectedUsers : string[] = [];
+    selectedUsers.set(localSelectedUsers);
+    conversationUsers.set(getConversationUsers(conversation, localSelectedUsers));
+});
+selectedUsers.subscribe(users => {
+    if (!users.length) {
+        return;
+    }
+
+    const localSelectedConversation : IConversation = null;
+    selectedConversation.set(localSelectedConversation);
+    conversationUsers.set(getConversationUsers(localSelectedConversation, users));
+});
 
 conversationUsers.subscribe(value => {
     if (!value.length) {
@@ -200,10 +212,11 @@ function appendConversation({ group, conversation } : {
     group: IGroup;
     conversation: IConversation;
 }): string | undefined {
+    conversation.users.sort(userOrder);
     const existingConversation = group.conversations?.find(
         existingConversation => existingConversation.users.length === conversation.users.length
             && existingConversation.users.every(
-                (value, index) => value === conversation.users[index]));
+                (value, index) => value.toLowerCase() === conversation.users[index].toLowerCase()));
     if (existingConversation) {
         return existingConversation.id;
     }
@@ -227,17 +240,26 @@ function usersOrder(
         idx: number;
     }) : number {
     if (idx >= a.length) {
+        if (idx < b.length) {
+            return GREATER;
+        }
         return EQUALS;
+    } else if (idx >= b.length) {
+        return LESS;
     }
-    const aLowercased = a[idx].toLowerCase();
-    const bLowercased = b[idx].toLowerCase();
+    const userCompare = userOrder(a[idx], b[idx]);
+    return userCompare || usersOrder({
+        a,
+        b,
+        idx: idx + 1
+    });
+}
+function userOrder(a: string, b: string) : number {
+    const aLowercased = a.toLowerCase();
+    const bLowercased = b.toLowerCase();
     return aLowercased > bLowercased
         ? GREATER
         : (aLowercased < bLowercased
             ? LESS
-            : usersOrder({
-                a,
-                b,
-                idx: idx + 1
-            }));
+            : EQUALS);
 }

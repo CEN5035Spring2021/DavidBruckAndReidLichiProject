@@ -98,7 +98,7 @@ export function updateGroupUsers({ group, users } : {
     }
     if (group.users) {
         const existingUsers = new Map<string, IOrganizationUser>(
-            group.users.map(user => [ user.emailAddress, user ]));
+            group.users.map(user => [ user.emailAddress.toLowerCase(), user ]));
         let requiresReordering: boolean | undefined;
         for (const user of users) {
             const existingUser = existingUsers.get(user.emailAddress.toLowerCase());

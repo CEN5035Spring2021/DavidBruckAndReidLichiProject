@@ -234,7 +234,7 @@
 
                 $emailAddress = existingUser.emailAddress; // In case the email address had different casing
 
-                await connectSignalR(existingUser.emailAddress);
+                await connectSignalR(existingUser.emailAddress.toLowerCase());
                 if (tempOrganizations.length) {
                     await fetchMessages({
                         signingPrivateKey: tempSigningPrivateKey

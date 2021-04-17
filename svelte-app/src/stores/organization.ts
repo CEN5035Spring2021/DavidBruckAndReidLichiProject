@@ -218,7 +218,7 @@ function updateOrganizationUsers({ organization, users } : {
     }
     if (organization.users) {
         const existingUsers = new Map<string, IOrganizationUser>(
-            organization.users.map(user => [ user.emailAddress, user ]));
+            organization.users.map(user => [ user.emailAddress.toLowerCase(), user ]));
         let requiresReordering: boolean | undefined;
         for (const user of users) {
             const existingUser = existingUsers.get(user.emailAddress.toLowerCase());

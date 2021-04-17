@@ -50,7 +50,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
             throw new Error('Request body has an element in userMessages without encryptedKey');
         }
         userMessages.set(userMessage.emailAddress.toLowerCase(), userMessage.encryptedKey);
-        signalRUsers.push(userMessage.emailAddress);
+        signalRUsers.push(userMessage.emailAddress.toLowerCase());
     }
 
     const { database, users, userId, time } = await getValidatedUser({
@@ -119,6 +119,8 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
     }
 
     const messages = await getMessagesContainer(database);
+    const lowercasedBodyUserMessages = body.userMessages.map(
+        userMessage => userMessage.emailAddress.toLowerCase());
     const messagePromises: Array<Promise<ItemResponse<Message>>> = [];
     for (const userMessage of userMessages) {
         const newMessage: Message = {
@@ -126,9 +128,9 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
             organizationId: existingOrganization.id,
             groupId: existingGroup.id,
             userId: usersLowercasedEmailAddressesToIds.get(userMessage[0]),
-            otherUserIds: body.userMessages
-                .filter(otherUserMessage => userMessage[0] !== otherUserMessage.emailAddress)
-                .map(userMessage => usersLowercasedEmailAddressesToIds.get(userMessage.emailAddress))
+            otherUserIds: lowercasedBodyUserMessages
+                .filter(otherUserEmailAddress => userMessage[0] !== otherUserEmailAddress)
+                .map(userEmailAddress => usersLowercasedEmailAddressesToIds.get(userEmailAddress))
                 .concat(senderId),
             senderId,
             encryptedMessage: body.encryptedMessage,

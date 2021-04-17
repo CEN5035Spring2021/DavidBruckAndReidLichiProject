@@ -156,7 +156,7 @@ export async function populateOrganizationUsers(
 
     return {
         adminIdx: adminUser && existingUsers?.findIndex(
-            existingUser => existingUser.emailAddress === adminUser),
+            existingUser => existingUser.emailAddress.toLowerCase() === adminUser.toLowerCase()),
         users: existingUsers || []
     };
 }

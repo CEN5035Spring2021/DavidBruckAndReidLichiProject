@@ -41,7 +41,7 @@
             const selfMessageOnly =
                 recipients[0].toLowerCase() === ($emailAddress as string).toLowerCase();
             const recipientsToEncryptionKeys = new Map<string, string>(
-                group.users.map(user => [ user.emailAddress, user.encryptionPublicKey ]));
+                group.users.map(user => [ user.emailAddress.toLowerCase(), user.encryptionPublicKey ]));
 
             const crypt = new OpenCrypto();
             const sharedKey = await crypt.getSharedKey(
@@ -65,7 +65,7 @@
                 groupMessages.push({
                     encryptedKey: await crypt.encryptKey(
                         await crypt.pemPublicToCrypto(
-                            recipientsToEncryptionKeys.get(recipient),
+                            recipientsToEncryptionKeys.get(recipient.toLowerCase()),
                             {
                                 name: 'RSA-OAEP',
                                 hash: 'SHA-512',
