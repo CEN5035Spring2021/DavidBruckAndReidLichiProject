@@ -234,7 +234,10 @@
 
                 $emailAddress = existingUser.emailAddress; // In case the email address had different casing
 
-                await connectSignalR(existingUser.emailAddress.toLowerCase());
+                await connectSignalR({
+                    xMsClientPrincipalName: existingUser.emailAddress.toLowerCase(),
+                    signingPrivateKey: tempSigningPrivateKey
+                });
                 if (tempOrganizations.length) {
                     await fetchMessages({
                         signingPrivateKey: tempSigningPrivateKey

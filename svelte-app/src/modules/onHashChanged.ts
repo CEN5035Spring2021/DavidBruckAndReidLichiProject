@@ -1,5 +1,6 @@
 import OpenCrypto from 'opencrypto';
 import { get } from 'svelte/store';
+import type { IGlobalFeedback } from '../stores/globalFeedback';
 import { globalFeedback } from '../stores/globalFeedback';
 import { selectedGroup } from '../stores/group';
 import {
@@ -18,6 +19,7 @@ import { CreateOrganizationResponseType, CreateGroupUserResponseType } from './s
 import { sign } from './sign';
 
 const POST = 'POST';
+const NOT_FOUND = -1;
 
 export default async function onHashChanged(
     options?: {
@@ -306,6 +308,26 @@ async function groupUserConfirmation(
                 }
             ]);
             break;
+        case CreateGroupUserResponseType.UserAlreadyExists: {
+            const userAlreadyExistsFeedback: IGlobalFeedback = {
+                message: 'Another user already confirmed this email address. Create a new user.'
+            };
+            globalFeedback.update(feedback =>
+                [
+                    ...feedback,
+                    userAlreadyExistsFeedback
+                ]);
+            globalFeedback.subscribe(value => {
+                if (value.indexOf(userAlreadyExistsFeedback) === NOT_FOUND) {
+                    if (location.hash) {
+                        location.href = location.href.split('#')[0];
+                    } else {
+                        location.reload();
+                    }
+                }
+            });
+            break;
+        }
         default:
             globalFeedback.update(feedback =>
                 [

@@ -86,6 +86,7 @@ export async function getValidatedUser<T extends IUser>(
         database: DatabaseResponse;
         users: ContainerResponse;
         time: string;
+        anotherUserExistsWithSameEmailAddress: boolean;
     }> {
 
     if (body == null) {
@@ -113,9 +114,11 @@ export async function getValidatedUser<T extends IUser>(
     const time = body.time;
     let userId: string | undefined;
     let emailAddress: string | undefined;
+    let anotherUserExistsWithSameEmailAddress = false;
     do {
         const { resources } = await usersReader.fetchNext();
         if (resources.length) {
+            anotherUserExistsWithSameEmailAddress = true;
             for (const user of resources) {
                 // Add back original signature to make sure the existing user identifies the same
                 body.signature = signature;
@@ -142,6 +145,7 @@ export async function getValidatedUser<T extends IUser>(
         emailAddress,
         database: ensuredDatabase,
         users: ensuredUsers,
-        time
+        time,
+        anotherUserExistsWithSameEmailAddress
     };
 }

@@ -153,7 +153,9 @@
                 });
             }
 
-            await connectSignalR(localEmailAddress.toLowerCase());
+            await connectSignalR({
+                xMsClientPrincipalName: localEmailAddress.toLowerCase()
+            });
 
             $encryptionPrivateKey = encryptionKeyPair.privateKey;
             $encryptionPublicKey = encryptionKeyPair.publicKey;
