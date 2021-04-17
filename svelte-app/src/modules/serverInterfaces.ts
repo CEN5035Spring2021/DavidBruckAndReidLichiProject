@@ -12,7 +12,8 @@ export interface CreateOrganizationResponse {
 export enum CreateOrganizationResponseType {
     AlreadyExists = 'AlreadyExists',
     Created = 'Created',
-    ConfirmationEmailSent = 'ConfirmationEmailSent'
+    ConfirmationEmailSent = 'ConfirmationEmailSent',
+    UserAlreadyExists = 'UserAlreadyExists'
 }
 export interface OrganizationsRequest {
     emailAddress: string;
@@ -61,7 +62,17 @@ export interface CreateGroupUserResponse {
 export enum CreateGroupUserResponseType {
     AlreadyExists = 'AlreadyExists',
     Created = 'Created',
-    ConfirmationEmailSent = 'ConfirmationEmailSent'
+    ConfirmationEmailSent = 'ConfirmationEmailSent',
+    UserAlreadyExists = 'UserAlreadyExists'
+}
+
+export interface NegotiateResponse {
+    type: NegotiateResponseType;
+    connectionInfo?: SignalRConnectionInfo;
+}
+export enum NegotiateResponseType {
+    Success = 'Success',
+    UserAlreadyExists = 'UserAlreadyExists'
 }
 export interface SignalRConnectionInfo {
     accessToken: string;
@@ -109,4 +120,7 @@ export interface DeleteMessagesRequest {
 }
 export enum DeleteMessagesResponse {
     Deleted = 'Deleted'
+}
+export interface NegotiateRequest {
+    emailAddress: string;
 }

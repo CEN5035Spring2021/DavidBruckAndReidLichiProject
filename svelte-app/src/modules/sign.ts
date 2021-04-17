@@ -7,13 +7,40 @@ export interface Signed {
     time: string;
 }
 export async function sign<T>(
+    { method, url, body, crypt, signingKey, omitBody } : {
+        method: string;
+        url: string;
+        body: T;
+        crypt?: OpenCrypto;
+        signingKey?: CryptoKey;
+        omitBody: true;
+    }) : Promise<Signed>;
+export async function sign<T>(
+    { method, url, body, crypt, signingKey, omitBody } : {
+        method: string;
+        url: string;
+        body: T;
+        crypt?: OpenCrypto;
+        signingKey?: CryptoKey;
+        omitBody: false;
+    }) : Promise<T & Signed>;
+export async function sign<T>(
     { method, url, body, crypt, signingKey } : {
         method: string;
         url: string;
         body: T;
         crypt?: OpenCrypto;
         signingKey?: CryptoKey;
-    }) : Promise<T & Signed> {
+    }) : Promise<T & Signed>;
+export async function sign<T>(
+    { method, url, body, crypt, signingKey, omitBody } : {
+        method: string;
+        url: string;
+        body: T;
+        crypt?: OpenCrypto;
+        signingKey?: CryptoKey;
+        omitBody: boolean;
+    }) : Promise<Signed | T & Signed> {
     const toSign: T & { method: string; url: string; time: string } = {
         ...body,
         method,
@@ -21,11 +48,18 @@ export async function sign<T>(
         time: new Date().toISOString()
     };
 
-    return {
-        ...body,
-        time: toSign.time,
-        signature: await (crypt || new OpenCrypto()).sign(
-            signingKey || get(signingPrivateKey),
-            new TextEncoder().encode(JSON.stringify(toSign, Object.keys(toSign).sort())), {}) as string
-    };
+    const signature = await (crypt || new OpenCrypto()).sign(
+        signingKey || get(signingPrivateKey),
+        new TextEncoder().encode(JSON.stringify(toSign, Object.keys(toSign).sort())), {}) as string;
+
+    return omitBody
+        ? {
+            signature,
+            time: toSign.time
+        }
+        : {
+            ...body,
+            signature,
+            time: toSign.time
+        };
 }

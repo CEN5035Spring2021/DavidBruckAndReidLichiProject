@@ -32,7 +32,8 @@ interface CreateGroupUserResponse {
 enum CreateGroupUserResponseType {
     AlreadyExists = 'AlreadyExists',
     Created = 'Created',
-    ConfirmationEmailSent = 'ConfirmationEmailSent'
+    ConfirmationEmailSent = 'ConfirmationEmailSent',
+    UserAlreadyExists = 'UserAlreadyExists'
 }
 interface NewGroupUserMessage {
     organization: string;
@@ -82,7 +83,8 @@ async function handleConfirmation(
 
     const {
         userId,
-        users
+        users,
+        anotherUserExistsWithSameEmailAddress
     } =
         await getValidatedUser({
             method: req.method,
@@ -94,6 +96,15 @@ async function handleConfirmation(
             },
             database
         });
+
+    if (!userId && anotherUserExistsWithSameEmailAddress) {
+        return result({
+            context,
+            response: {
+                type: CreateGroupUserResponseType.UserAlreadyExists
+            }
+        });
+    }
 
     const groupUsers = await getGroupUsersContainer(database);
     if (userId && await checkExistingGroupUsers({

@@ -24,7 +24,8 @@ interface CreateOrganizationResponse {
 enum CreateOrganizationResponseType {
     AlreadyExists = 'AlreadyExists',
     Created = 'Created',
-    ConfirmationEmailSent = 'ConfirmationEmailSent'
+    ConfirmationEmailSent = 'ConfirmationEmailSent',
+    UserAlreadyExists = 'UserAlreadyExists'
 }
 
 const EMAIL_FROM = process.env['CEN5035Spring2021bruck010Email'];
@@ -60,7 +61,8 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         userId,
         emailAddress,
         database,
-        users
+        users,
+        anotherUserExistsWithSameEmailAddress
     } =
         await getValidatedUser({
             method: req.method,
@@ -74,17 +76,26 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
 
     const organizations = await getOrganizationsContainer(database);
 
-    if (userId && !body.confirmation) {
-        // No need to send confirmation email, we already know the user
-        return ensureOrganizationUser({
+    if (userId) {
+        if (!body.confirmation) {
+            // No need to send confirmation email, we already know the user
+            return ensureOrganizationUser({
+                context,
+                body,
+                database,
+                users,
+                organizations,
+                userId,
+                emailAddress,
+                organizationName: body.name
+            });
+        }
+    } else if (anotherUserExistsWithSameEmailAddress) {
+        return result({
             context,
-            body,
-            database,
-            users,
-            organizations,
-            userId,
-            emailAddress,
-            organizationName: body.name
+            response: {
+                type: CreateOrganizationResponseType.UserAlreadyExists
+            }
         });
     }
 

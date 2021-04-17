@@ -21,6 +21,7 @@
     let feedback: string;
     let name: string;
     let nameInvalid: boolean;
+    let emailAddressTaken: boolean;
 
     onMount(() => nameInput.focus());
 
@@ -75,6 +76,10 @@
                 case CreateOrganizationResponseType.ConfirmationEmailSent:
                     feedback = 'Confirmation email sent';
                     break;
+                case CreateOrganizationResponseType.UserAlreadyExists:
+                    feedback = 'Another user already confirmed this email address. Create a new user.';
+                    emailAddressTaken = true;
+                    break;
                 default:
                     feedback = `Unexpected server response type ${response.type as string}`;
                     break;
@@ -105,11 +110,22 @@
             }
         ]));
 
+    const localClose = () => {
+        if (emailAddressTaken) {
+            if (location.hash) {
+                location.href = location.href.split('#')[0];
+            } else {
+                location.reload();
+            }
+        }
+        close();
+    };
+
     const pleaseWaitSubscription = subscribePleaseWait(creatingOrganization, 'Creating organization...');
     onDestroy(pleaseWaitSubscription);
 </script>
 
-<Modal { close }>
+<Modal close={ localClose }>
     <h2 slot=title>New organization</h2>
     <div slot=content>
         <label for=newName>Name:</label>
