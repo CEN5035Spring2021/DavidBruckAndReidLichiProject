@@ -2,11 +2,9 @@ import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import type OpenCrypto from 'opencrypto';
 import type { IGlobalFeedback } from '../stores/globalFeedback';
 import { unconditionalMessage, showUnconditionalMessage, globalFeedback } from '../stores/globalFeedback';
-import { runUnderOrganizationStore } from '../stores/organization';
 import { api } from './api';
-import fetchMessages from './fetchMessages';
 import getDefaultFunctionsUrl from './getFunctionsUrl';
-import type { NegotiateRequest, NewGroupUserMessage, NegotiateResponse } from './serverInterfaces';
+import type { NegotiateRequest, NegotiateResponse } from './serverInterfaces';
 import { NegotiateResponseType } from './serverInterfaces';
 import { sign } from './sign';
 
@@ -19,6 +17,9 @@ const STRING_START = 0;
 export async function connectSignalR(
     options: {
         xMsClientPrincipalName: string;
+        signalRActions: {
+            [key: string]: (...args) => void;
+        };
         crypt?: OpenCrypto;
         signingPrivateKey?: CryptoKey;
     }) : Promise<void> {
@@ -59,38 +60,11 @@ export async function connectSignalR(
         }
     });
 
-    hubConnection.on('newGroupUser', onNewGroupUser);
-    hubConnection.on('newMessage', onNewMessage);
+    for (const actionName in options.signalRActions) {
+        hubConnection.on(actionName, options.signalRActions[actionName]);
+    }
 
     await hubConnection.start();
-}
-
-function onNewGroupUser(message: NewGroupUserMessage) : void {
-    runUnderOrganizationStore(store => store.appendGroupUser({
-        user: {
-            emailAddress: message.emailAddress,
-            encryptionPublicKey: message.encryptionKey
-        },
-        organization: message.organization,
-        group: message.group
-    })).catch(reason =>
-        globalFeedback.update(feedback => [
-            ...feedback,
-            {
-                message: 'Error in onNewGroupUser: ' +
-                    (reason && (reason as { message: string }).message || reason as string)
-            }
-        ]));
-}
-function onNewMessage() : void {
-    fetchMessages({}).catch(reason =>
-        globalFeedback.update(feedback => [
-            ...feedback,
-            {
-                message: 'Error in onNewMessage: ' +
-                    (reason && (reason as { message: string }).message || reason as string)
-            }
-        ]));
 }
 
 async function getSignalRConnectionInfo(

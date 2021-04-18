@@ -1,5 +1,3 @@
-import { encodeMsClientPrincipalName } from './signalR';
-
 const READY = 4; // XHR Ready
 const OK = 200; // HTTP status
 
@@ -43,7 +41,7 @@ export function api<T>(
                     if (xMsClientPrincipalName) {
                         xhr.setRequestHeader(
                             'x-ms-client-principal-name',
-                            encodeMsClientPrincipalName(xMsClientPrincipalName));
+                            xMsClientPrincipalName);
                     }
                     xhr.send(body && JSON.stringify(body));
                 });
