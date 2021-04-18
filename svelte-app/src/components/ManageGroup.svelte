@@ -125,9 +125,17 @@
                 case CreateGroupUserResponseType.ConfirmationEmailSent:
                     feedback = 'Confirmation email sent';
                     break;
-                case CreateGroupUserResponseType.AlreadyExists:
+                case CreateGroupUserResponseType.AlreadyExists: {
                     feedback = 'User already added to group';
+                    const user = response.users[0];
+                    await runUnderOrganizationStore(organizationStore => organizationStore.appendGroupUser({
+                        user: {
+                            emailAddress: user.emailAddress,
+                            encryptionPublicKey: user.encryptionPublicKey
+                        }
+                    }));
                     break;
+                }
                 default:
                     feedback = `Unexpected server response type ${response.type as string}`;
                     break;

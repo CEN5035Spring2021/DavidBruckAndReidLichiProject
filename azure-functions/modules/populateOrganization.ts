@@ -41,6 +41,7 @@ export async function populateOrganization(
         limitToOrganization?: string;
         returnGroupNameById?: string;
     }) : Promise<string | void> {
+
     const existingGroups = new Map<string, GroupResponse>();
     await populateOrganizationImpl({
         database,
@@ -406,6 +407,10 @@ async function populateNonAdminOrganizationGroups(
             groupIds.push(existingGroupUser.groupId);
         }
     } while (groupUsersReader.hasMoreResults());
+
+    if (!groupIds.length) {
+        return;
+    }
 
     const groupsReader = groups.container.items.query({
         query: `SELECT * FROM root r WHERE r.id IN (${

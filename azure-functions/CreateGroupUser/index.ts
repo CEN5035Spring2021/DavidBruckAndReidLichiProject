@@ -107,18 +107,11 @@ async function handleConfirmation(
     }
 
     const groupUsers = await getGroupUsersContainer(database);
-    if (userId && await checkExistingGroupUsers({
+    const userAlreadyExists = userId && await checkExistingGroupUsers({
         groupUsers,
         groupId: groupUserConfirmation.groupId,
         userId
-    })) {
-        return result({
-            context,
-            response: {
-                type: CreateGroupUserResponseType.AlreadyExists
-            }
-        });
-    }
+    });
 
     const ensuredUserId = userId || await createUser({
         users,
@@ -138,12 +131,14 @@ async function handleConfirmation(
         });
     }
 
-    await createGroupUser({
-        groupUsers,
-        organizationId: groupUserConfirmation.organizationId,
-        groupId: groupUserConfirmation.groupId,
-        userId: ensuredUserId
-    });
+    if (!userAlreadyExists) {
+        await createGroupUser({
+            groupUsers,
+            organizationId: groupUserConfirmation.organizationId,
+            groupId: groupUserConfirmation.groupId,
+            userId: ensuredUserId
+        });
+    }
 
     const groups = await getGroupsContainer(database);
     const existingOrganizations = new Map<string, OrganizationResponse>();
@@ -177,6 +172,17 @@ async function handleConfirmation(
         usersToGroups,
         includeAdminUser: organizationAdmin.userId
     });
+
+    if (userAlreadyExists) {
+        return result({
+            context,
+            response: {
+                type: CreateGroupUserResponseType.AlreadyExists,
+                organization,
+                users: userResponses
+            }
+        });
+    }
 
     // Prepare to tell all other group users about the new user in the group
     let existingUser: UserResponse;
@@ -295,7 +301,13 @@ async function handleNonConfirmation(
         return result({
             context,
             response: {
-                type: CreateGroupUserResponseType.AlreadyExists
+                type: CreateGroupUserResponseType.AlreadyExists,
+                users: [
+                    {
+                        emailAddress: user.emailAddress,
+                        encryptionPublicKey: user.encryptionKey
+                    }
+                ]
             }
         });
     }
