@@ -143,18 +143,20 @@
 
             $emailAddress = localEmailAddress;
 
-            if (!getHashValue('organizationConfirmation')) {
+            let organizationAdded = getHashValue('organizationConfirmation')
+                ? false
+
                 // Hash hasn't changed, but this is the earliest we can process it
-                await onHashChanged({
+                : await onHashChanged({
                     crypt,
                     tempEncryptionPublicKey: encryptionKeyPair.publicKey,
                     tempSigningPublicKey: signingKeyPair.publicKey,
                     tempSigningPrivateKey: signingKeyPair.privateKey
                 });
-            }
 
             await connectSignalR({
-                xMsClientPrincipalName: localEmailAddress.toLowerCase()
+                xMsClientPrincipalName: localEmailAddress.toLowerCase(),
+                signingPrivateKey: organizationAdded ? signingKeyPair.privateKey : undefined
             });
 
             $encryptionPrivateKey = encryptionKeyPair.privateKey;
