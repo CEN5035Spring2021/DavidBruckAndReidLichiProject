@@ -138,8 +138,6 @@ async function handleConfirmation(
             groupId: groupUserConfirmation.groupId,
             userId: ensuredUserId
         });
-
-        throw new Error('Fake test error');
     }
 
     const groups = await getGroupsContainer(database);
