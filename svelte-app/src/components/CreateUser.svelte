@@ -13,7 +13,8 @@
     import { emailAddressMatch } from '../modules/emailAddressMatch';
     import getHashValue from '../modules/getHashValue';
     import onHashChanged from '../modules/onHashChanged';
-    import { connectSignalR } from '../modules/signalR';
+    import { connectSignalR, encodeMsClientPrincipalName } from '../modules/signalR';
+    import { newGroupUser, newMessage } from '../modules/signalRActions';
 
     export let close: () => void;
     export let creatingUser: Writable<boolean>;
@@ -155,8 +156,12 @@
                 });
 
             await connectSignalR({
-                xMsClientPrincipalName: localEmailAddress.toLowerCase(),
-                signingPrivateKey: organizationAdded ? signingKeyPair.privateKey : undefined
+                xMsClientPrincipalName: encodeMsClientPrincipalName(localEmailAddress.toLowerCase()),
+                signingPrivateKey: organizationAdded ? signingKeyPair.privateKey : undefined,
+                signalRActions: {
+                    newGroupUser,
+                    newMessage
+                }
             });
 
             $encryptionPrivateKey = encryptionKeyPair.privateKey;

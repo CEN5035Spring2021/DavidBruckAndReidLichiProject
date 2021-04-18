@@ -39,7 +39,9 @@ export function api<T>(
                     };
                     xhr.open(method, url);
                     if (xMsClientPrincipalName) {
-                        xhr.setRequestHeader('x-ms-client-principal-name', xMsClientPrincipalName);
+                        xhr.setRequestHeader(
+                            'x-ms-client-principal-name',
+                            xMsClientPrincipalName);
                     }
                     xhr.send(body && JSON.stringify(body));
                 });

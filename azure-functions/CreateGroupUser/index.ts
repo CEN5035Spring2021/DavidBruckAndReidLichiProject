@@ -15,6 +15,7 @@ import {
     getExistingGroup, populateOrganization, populateOrganizationUsers, getExistingOrganization, getOrganizationAdmin
 } from '../modules/populateOrganization';
 import sendMail from '../modules/sendMail';
+import { encodeMsClientPrincipalName } from '../modules/signalR';
 
 interface CreateGroupUserRequest extends IUser {
     groupUserEmailAddress?: string;
@@ -631,7 +632,7 @@ function result(
     if (signalRUsers) {
         context.bindings.signalRMessages = signalRUsers.map(
             signalRUser => ({
-                userId: signalRUser,
+                userId: encodeMsClientPrincipalName(signalRUser),
                 target: 'newGroupUser',
                 arguments: [
                     signalRMessage
