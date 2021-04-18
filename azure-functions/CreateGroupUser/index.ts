@@ -15,7 +15,7 @@ import {
     getExistingGroup, populateOrganization, populateOrganizationUsers, getExistingOrganization, getOrganizationAdmin
 } from '../modules/populateOrganization';
 import sendMail from '../modules/sendMail';
-import { encodeMsClientPrincipalName } from '../modules/signalR';
+import { encodeMsClientPrincipalName } from '../modules/encodeMsClientPrincipalName';
 
 interface CreateGroupUserRequest extends IUser {
     groupUserEmailAddress?: string;

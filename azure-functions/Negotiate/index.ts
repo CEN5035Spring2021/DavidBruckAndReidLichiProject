@@ -2,7 +2,7 @@ import type { QueryIterator, Resource } from '@azure/cosmos';
 import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
 import { getDatabase, getUsersContainer } from '../modules/database';
 import type { Signed, User } from '../modules/serverInterfaces';
-import { decodeMsClientPrincipalName } from '../modules/signalR';
+import { decodeMsClientPrincipalName } from '../modules/encodeMsClientPrincipalName';
 import { getValidatedUser } from '../modules/validateSignature';
 
 interface NegotiateResponse {
@@ -22,6 +22,7 @@ const httpTrigger: AzureFunction = async function(
     context: Context, req: HttpRequest, connectionInfo: SignalRConnectionInfo): Promise<void> {
 
     const emailAddress = decodeMsClientPrincipalName(req.headers['x-ms-client-principal-name']);
+    console.error(`Negotiate user: ${emailAddress}`);
 
     const body = req.body as Signed;
     if (body && body.signature) {

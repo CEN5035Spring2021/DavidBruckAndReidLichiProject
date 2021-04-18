@@ -16,7 +16,7 @@
     import onHashChanged from '../modules/onHashChanged';
     import { globalFeedback, subscribePleaseWait } from '../stores/globalFeedback';
     import { api } from '../modules/api';
-    import { connectSignalR, encodeMsClientPrincipalName } from '../modules/signalR';
+    import { connectSignalR } from '../modules/signalR';
     import { newGroupUser, newMessage } from '../modules/signalRActions';
     import fetchMessages from '../modules/fetchMessages';
 
@@ -236,7 +236,7 @@
                 $emailAddress = existingUser.emailAddress; // In case the email address had different casing
 
                 await connectSignalR({
-                    xMsClientPrincipalName: encodeMsClientPrincipalName(existingUser.emailAddress.toLowerCase()),
+                    xMsClientPrincipalName: existingUser.emailAddress.toLowerCase(),
                     signingPrivateKey: tempSigningPrivateKey,
                     signalRActions: {
                         newGroupUser,
