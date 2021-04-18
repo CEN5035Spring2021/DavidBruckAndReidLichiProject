@@ -95,7 +95,7 @@ const conversationsUpdateListeners: Array<() => void> = [];
 export const conversations = readable<IConversation[]>(
     [],
     set => {
-        const conversationsUpdateListener = () => set(get(selectedGroup).conversations || []);
+        const conversationsUpdateListener = () => set(get(selectedGroup)?.conversations || []);
         conversationsUpdateListeners.push(conversationsUpdateListener);
         const unsubscribe = selectedGroup.subscribe(value => value && set(value?.conversations || []));
         return () => {

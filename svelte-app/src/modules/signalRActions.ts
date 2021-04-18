@@ -4,14 +4,28 @@ import fetchMessages from './fetchMessages';
 import type { NewGroupUserMessage } from './serverInterfaces';
 
 export function newGroupUser(message: NewGroupUserMessage) : void {
-    runUnderOrganizationStore(store => store.appendGroupUser({
-        user: {
-            emailAddress: message.emailAddress,
-            encryptionPublicKey: message.encryptionKey
-        },
-        organization: message.organization,
-        group: message.group
-    })).catch(reason =>
+    runUnderOrganizationStore(async(store) => {
+        await store.appendGroupUser({
+            user: {
+                emailAddress: message.emailAddress,
+                encryptionPublicKey: message.encryptionKey
+            },
+            organization: message.organization,
+            group: message.group
+        });
+        if (message.otherUsers) {
+            for (const otherUser of message.otherUsers) {
+                await store.appendGroupUser({
+                    user: {
+                        emailAddress: otherUser.emailAddress,
+                        encryptionPublicKey: otherUser.encryptionPublicKey
+                    },
+                    organization: message.organization,
+                    group: message.group
+                });
+            }
+        }
+    }).catch(reason =>
         globalFeedback.update(feedback => [
             ...feedback,
             {

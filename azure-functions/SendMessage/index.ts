@@ -124,6 +124,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
         userMessage => userMessage.emailAddress.toLowerCase());
     const messagePromises: Array<Promise<ItemResponse<Message>>> = [];
     for (const userMessage of userMessages) {
+        const date = Date.parse(time);
         const newMessage: Message = {
             id: uuidV4(),
             organizationId: existingOrganization.id,
@@ -136,7 +137,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
             senderId,
             encryptedMessage: body.encryptedMessage,
             encryptedKey: userMessage[1],
-            date: time
+            date: isNaN(date) ? time : date.toString()
         };
         messagePromises.push(
             messages.container.items.create(newMessage));
