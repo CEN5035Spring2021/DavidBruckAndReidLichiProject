@@ -171,7 +171,7 @@
 </script>
 
 <ul>
-    { #each $messages as message }
+    { #each $messages as message (message.messageId) }
         <Message { crypt } { message } />
     { /each }
 </ul>

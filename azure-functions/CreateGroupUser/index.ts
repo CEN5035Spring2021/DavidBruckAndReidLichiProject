@@ -41,6 +41,11 @@ interface NewGroupUserMessage {
     group: string;
     emailAddress?: string;
     encryptionKey?: string;
+    otherUsers?: UserResponse[];
+}
+interface OtherUsersMessage {
+    newUser: string;
+    newGroupUserMessage: NewGroupUserMessage;
 }
 
 const EMAIL_FROM = process.env['CEN5035Spring2021bruck010Email'];
@@ -329,6 +334,24 @@ async function handleNonConfirmation(
     });
 
     // No need to send confirmation email, we already know the user
+    const signalRMessage: NewGroupUserMessage = {
+        organization: organization.name,
+        group: body.groupName,
+        emailAddress: user.emailAddress,
+        encryptionKey: user.encryptionKey
+    };
+    const groupUserEmailAddressLowercased = body.groupUserEmailAddress.toLowerCase();
+    const otherUsers = signalRUsers.filter(
+        otherUser => otherUser.emailAddress.toLowerCase() !== groupUserEmailAddressLowercased);
+    const otherUsersMessageToNewUser: OtherUsersMessage | undefined = otherUsers.length
+        ? {
+            newGroupUserMessage: {
+                ...signalRMessage,
+                otherUsers
+            },
+            newUser: groupUserEmailAddressLowercased
+        }
+        : undefined;
     result({
         context,
         response: {
@@ -340,13 +363,10 @@ async function handleNonConfirmation(
                 }
             ]
         },
-        signalRUsers,
-        signalRMessage: {
-            organization: organization.name,
-            group: body.groupName,
-            emailAddress: user.emailAddress,
-            encryptionKey: user.encryptionKey
-        }
+        signalRUsers: signalRUsers.map(
+            signalRUser => signalRUser.emailAddress.toLowerCase()),
+        signalRMessage,
+        otherUsersMessageToNewUser
     });
 }
 
@@ -357,7 +377,7 @@ async function getExistingGroupUsers(
         organizationId: string;
         groupId: string;
         excludeUserId: string;
-    }) : Promise<string[]> {
+    }) : Promise<UserResponse[]> {
     const ORGANIZATION_ID_NAME = '@organizationId';
     const GROUP_ID_NAME = '@groupId';
     const groupUsersReader = groupUsers.container.items.query({
@@ -384,7 +404,7 @@ async function getExistingGroupUsers(
         }
     } while (groupUsersReader.hasMoreResults());
 
-    const existingGroupUsers: string[] = [];
+    const existingGroupUsers: UserResponse[] = [];
     if (!groupUserIds.length) {
         return existingGroupUsers;
     }
@@ -405,7 +425,10 @@ async function getExistingGroupUsers(
     do {
         const { resources } = await usersReader.fetchNext();
         for (const user of resources) {
-            existingGroupUsers.push(user.emailAddress.toLowerCase());
+            existingGroupUsers.push({
+                emailAddress: user.emailAddress,
+                encryptionPublicKey: user.encryptionKey
+            });
         }
     } while (usersReader.hasMoreResults());
 
@@ -615,11 +638,12 @@ async function createGroupUserConfirmation(
 }
 
 function result(
-    { context, response, signalRUsers, signalRMessage }: {
+    { context, response, signalRUsers, signalRMessage, otherUsersMessageToNewUser }: {
         context: Context;
         response: CreateGroupUserResponse;
         signalRUsers?: string[];
         signalRMessage?: NewGroupUserMessage;
+        otherUsersMessageToNewUser?: OtherUsersMessage;
     }) : void {
 
     context.res = {
@@ -631,13 +655,25 @@ function result(
 
     if (signalRUsers) {
         context.bindings.signalRMessages = signalRUsers.map(
-            signalRUser => ({
-                userId: encodeMsClientPrincipalName(signalRUser),
-                target: 'newGroupUser',
-                arguments: [
-                    signalRMessage
-                ]
-            }));
+            signalRUser => {
+                const userId = encodeMsClientPrincipalName(signalRUser);
+                const target = 'newGroupUser';
+                return signalRUser === otherUsersMessageToNewUser?.newUser
+                    ? {
+                        userId,
+                        target,
+                        arguments: [
+                            otherUsersMessageToNewUser?.newGroupUserMessage || signalRMessage
+                        ]
+                    }
+                    : {
+                        userId,
+                        target,
+                        arguments: [
+                            signalRMessage
+                        ]
+                    };
+            });
     }
 }
 

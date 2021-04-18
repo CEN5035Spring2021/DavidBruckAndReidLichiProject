@@ -83,6 +83,7 @@ export interface NewGroupUserMessage {
     group: string;
     emailAddress: string;
     encryptionKey: string;
+    otherUsers?: UserResponse[];
 }
 export interface SendMessageRequest {
     organization: string;

@@ -134,7 +134,7 @@ const groupUsersUpdateListeners: Array<() => void> = [];
 export const groupUsers = readable<IOrganizationUser[]>(
     [],
     set => {
-        const groupUsersUpdateListener = () => set(get(selectedGroup).users || []);
+        const groupUsersUpdateListener = () => set(get(selectedGroup)?.users || []);
         groupUsersUpdateListeners.push(groupUsersUpdateListener);
         const unsubscribe = selectedGroup.subscribe(value => value && set(value.users || []));
         return () => {
