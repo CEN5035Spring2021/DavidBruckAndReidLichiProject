@@ -3,7 +3,6 @@ import type OpenCrypto from 'opencrypto';
 import type { IGlobalFeedback } from '../stores/globalFeedback';
 import { unconditionalMessage, showUnconditionalMessage, globalFeedback } from '../stores/globalFeedback';
 import { api } from './api';
-import { encodeMsClientPrincipalName } from './encodeMsClientPrincipalName';
 import getDefaultFunctionsUrl from './getFunctionsUrl';
 import type { NegotiateRequest, NegotiateResponse } from './serverInterfaces';
 import { NegotiateResponseType } from './serverInterfaces';
@@ -75,8 +74,6 @@ async function getSignalRConnectionInfo(
     const url = `${getDefaultFunctionsUrl()}api/negotiate`;
     const method = signingPrivateKey ? POST : GET;
     let body: NegotiateRequest;
-    const encodedMsClientPrincipalName =
-        encodeMsClientPrincipalName(xMsClientPrincipalName);
     const response = await api<NegotiateResponse>(
         signingPrivateKey
             ? {
@@ -92,12 +89,12 @@ async function getSignalRConnectionInfo(
                     signingKey: signingPrivateKey,
                     omitBody: true
                 }),
-                xMsClientPrincipalName: encodedMsClientPrincipalName
+                xMsClientPrincipalName
             }
             : {
                 method,
                 url,
-                xMsClientPrincipalName: encodedMsClientPrincipalName
+                xMsClientPrincipalName
             });
     switch (response.type) {
         case NegotiateResponseType.Success:
