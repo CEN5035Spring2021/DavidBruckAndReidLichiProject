@@ -13,7 +13,7 @@
     import { emailAddressMatch } from '../modules/emailAddressMatch';
     import getHashValue from '../modules/getHashValue';
     import onHashChanged from '../modules/onHashChanged';
-    import { connectSignalR, encodeMsClientPrincipalName } from '../modules/signalR';
+    import { connectSignalR } from '../modules/signalR';
     import { newGroupUser, newMessage } from '../modules/signalRActions';
 
     export let close: () => void;
@@ -156,7 +156,7 @@
                 });
 
             await connectSignalR({
-                xMsClientPrincipalName: encodeMsClientPrincipalName(localEmailAddress.toLowerCase()),
+                xMsClientPrincipalName: localEmailAddress.toLowerCase(),
                 signingPrivateKey: organizationAdded ? signingKeyPair.privateKey : undefined,
                 signalRActions: {
                     newGroupUser,

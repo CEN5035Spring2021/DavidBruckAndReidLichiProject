@@ -8,7 +8,7 @@ import {
 import type { IUser, Message, User } from '../modules/serverInterfaces';
 import { getValidatedUser } from '../modules/validateSignature';
 import { v4 as uuidV4 } from 'uuid';
-import { encodeMsClientPrincipalName } from '../modules/signalR';
+import { encodeMsClientPrincipalName } from '../modules/encodeMsClientPrincipalName';
 
 interface SendMessageRequest extends IUser {
     organization?: string;
