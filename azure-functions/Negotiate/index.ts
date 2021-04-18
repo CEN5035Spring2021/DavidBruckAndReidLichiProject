@@ -2,6 +2,7 @@ import type { QueryIterator, Resource } from '@azure/cosmos';
 import type { AzureFunction, Context, HttpRequest } from '@azure/functions';
 import { getDatabase, getUsersContainer } from '../modules/database';
 import type { Signed, User } from '../modules/serverInterfaces';
+import { decodeMsClientPrincipalName } from '../modules/signalR';
 import { getValidatedUser } from '../modules/validateSignature';
 
 interface NegotiateResponse {
@@ -20,7 +21,7 @@ interface SignalRConnectionInfo {
 const httpTrigger: AzureFunction = async function(
     context: Context, req: HttpRequest, connectionInfo: SignalRConnectionInfo): Promise<void> {
 
-    const emailAddress = req.headers['x-ms-client-principal-name'];
+    const emailAddress = decodeMsClientPrincipalName(req.headers['x-ms-client-principal-name']);
 
     const body = req.body as Signed;
     if (body && body.signature) {

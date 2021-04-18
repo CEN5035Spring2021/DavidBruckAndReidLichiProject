@@ -8,6 +8,7 @@ import {
 import type { IUser, Message, User } from '../modules/serverInterfaces';
 import { getValidatedUser } from '../modules/validateSignature';
 import { v4 as uuidV4 } from 'uuid';
+import { encodeMsClientPrincipalName } from '../modules/signalR';
 
 interface SendMessageRequest extends IUser {
     organization?: string;
@@ -154,7 +155,7 @@ const httpTrigger: AzureFunction = async function(context: Context, req: HttpReq
     if (signalRUsers) {
         context.bindings.signalRMessages = signalRUsers.map(
             signalRUser => ({
-                userId: signalRUser,
+                userId: encodeMsClientPrincipalName(signalRUser),
                 target: 'newMessage',
                 arguments: []
             }));
