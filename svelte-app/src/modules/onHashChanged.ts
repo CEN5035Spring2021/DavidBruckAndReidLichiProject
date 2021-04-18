@@ -27,7 +27,7 @@ export default async function onHashChanged(
         tempEncryptionPublicKey?: CryptoKey;
         tempSigningPublicKey?: CryptoKey;
         tempSigningPrivateKey?: CryptoKey;
-    } | Partial<HashChangeEvent>) : Promise<void> {
+    } | Partial<HashChangeEvent>) : Promise<boolean> {
 
     try {
         if (isHashChangeEvent(options)) {
@@ -40,7 +40,7 @@ export default async function onHashChanged(
                             (reason && (reason as { message: string }).message || reason as string)
                     }
                 ]));
-            return;
+            return false;
         }
         const {
             tempEncryptionPublicKey = get(encryptionPublicKey), tempSigningPublicKey = get(signingPublicKey),
@@ -53,10 +53,10 @@ export default async function onHashChanged(
             tempSigningPublicKey,
             crypt
         })) {
-            return;
+            return false;
         }
 
-        await groupUserConfirmation({
+        return groupUserConfirmation({
             tempEncryptionPublicKey,
             tempSigningPublicKey,
             tempSigningPrivateKey,
@@ -169,7 +169,7 @@ async function groupUserConfirmation(
         tempSigningPublicKey?: CryptoKey;
         tempSigningPrivateKey?: CryptoKey;
         crypt: OpenCrypto;
-    }) : Promise<void> {
+    }) : Promise<boolean> {
     const confirmation = getHashValue('groupUserConfirmation');
 
     if (!confirmation) {
@@ -219,9 +219,10 @@ async function groupUserConfirmation(
         body: createGroupRequest
     });
 
+    let organizationAdded = false;
     switch (response.type) {
         case CreateGroupUserResponseType.Created:
-            await handleResponseOrganization({
+            organizationAdded = await handleResponseOrganization({
                 response,
                 hashEmailAddress
             });
@@ -233,7 +234,7 @@ async function groupUserConfirmation(
                     message: 'User already part of group'
                 }
             ]);
-            await handleResponseOrganization({
+            organizationAdded = await handleResponseOrganization({
                 response,
                 hashEmailAddress
             });
@@ -272,91 +273,96 @@ async function groupUserConfirmation(
     groupUserConfirmationEmailAddress.set('');
 
     location.hash = '';
+
+    return organizationAdded;
 }
 
 async function handleResponseOrganization(
     { response, hashEmailAddress } : {
         response: CreateGroupUserResponse;
         hashEmailAddress: string;
-    }) {
-    if (response.organization) {
-        const usersToEncryptionKey = response.users && new Map<string, string>(
-            response.users.map(user => {
-                if (!user || !user.emailAddress) {
-                    throw new Error('Server returned a user without an email address');
-                }
-                if (!user.encryptionPublicKey) {
-                    throw new Error('Server returned a user without an encryption key');
-                }
-                return [ user.emailAddress, user.encryptionPublicKey ];
-            }));
-
-        if (!response.organization || !response.organization.name) {
-            throw new Error('Server returned an organization without a name');
-        }
-
-        const tempOrganization = {
-            name: response.organization.name,
-            admin: response.organization.admin,
-            users: [ ...usersToEncryptionKey.entries() ].map(
-                ([ emailAddress, encryptionPublicKey ]) => ({
-                    emailAddress,
-                    encryptionPublicKey
-                })
-            ),
-            groups: response.organization.groups?.map(
-                organizationGroup => {
-                    if (!organizationGroup || !organizationGroup.name) {
-                        throw new Error('Server returned an organization group without a name');
-                    }
-                    return {
-                        name: organizationGroup.name,
-                        users: organizationGroup.users?.map(
-                            emailAddress => {
-                                if (!emailAddress) {
-                                    throw new Error(
-                                        'Server returned an organization group user without an email ' +
-                                        'address');
-                                }
-                                const encryptionPublicKey = usersToEncryptionKey.get(emailAddress);
-                                if (!encryptionPublicKey) {
-                                    throw new Error(
-                                        'Server returned an organization group user without an ' +
-                                        'encryption key');
-                                }
-                                return {
-                                    emailAddress,
-                                    encryptionPublicKey
-                                };
-                            })
-                    };
-                })
-        };
-        globalFeedback.update(feedback =>
-            [
-                ...feedback,
-                {
-                    message: 'User added to group',
-                    isInformational: true,
-                    title: 'Email address verified'
-                }
-            ]);
-        switchingOrganization.set(true);
-
-        const addedGroups = await runUnderOrganizationStore(organizationStore => organizationStore.update({
-            lowercasedEmailAddress: hashEmailAddress.toLowerCase(),
-            organizations: [
-                tempOrganization
-            ]
-        }));
-        if (get(selectedOrganization) === tempOrganization.name) {
-            switchingOrganization.set(false);
-        } else {
-            selectedOrganization.set(tempOrganization.name);
-        }
-
-        selectedGroup.set(addedGroups?.length ? addedGroups[0] : null);
+    }) : Promise<boolean> {
+    if (!response.organization) {
+        return false;
     }
+
+    const usersToEncryptionKey = response.users && new Map<string, string>(
+        response.users.map(user => {
+            if (!user || !user.emailAddress) {
+                throw new Error('Server returned a user without an email address');
+            }
+            if (!user.encryptionPublicKey) {
+                throw new Error('Server returned a user without an encryption key');
+            }
+            return [ user.emailAddress, user.encryptionPublicKey ];
+        }));
+
+    if (!response.organization || !response.organization.name) {
+        throw new Error('Server returned an organization without a name');
+    }
+
+    const tempOrganization = {
+        name: response.organization.name,
+        admin: response.organization.admin,
+        users: [ ...usersToEncryptionKey.entries() ].map(
+            ([ emailAddress, encryptionPublicKey ]) => ({
+                emailAddress,
+                encryptionPublicKey
+            })
+        ),
+        groups: response.organization.groups?.map(
+            organizationGroup => {
+                if (!organizationGroup || !organizationGroup.name) {
+                    throw new Error('Server returned an organization group without a name');
+                }
+                return {
+                    name: organizationGroup.name,
+                    users: organizationGroup.users?.map(
+                        emailAddress => {
+                            if (!emailAddress) {
+                                throw new Error(
+                                    'Server returned an organization group user without an email ' +
+                                    'address');
+                            }
+                            const encryptionPublicKey = usersToEncryptionKey.get(emailAddress);
+                            if (!encryptionPublicKey) {
+                                throw new Error(
+                                    'Server returned an organization group user without an ' +
+                                    'encryption key');
+                            }
+                            return {
+                                emailAddress,
+                                encryptionPublicKey
+                            };
+                        })
+                };
+            })
+    };
+    globalFeedback.update(feedback =>
+        [
+            ...feedback,
+            {
+                message: 'User added to group',
+                isInformational: true,
+                title: 'Email address verified'
+            }
+        ]);
+    switchingOrganization.set(true);
+
+    const addedGroups = await runUnderOrganizationStore(organizationStore => organizationStore.update({
+        lowercasedEmailAddress: hashEmailAddress.toLowerCase(),
+        organizations: [
+            tempOrganization
+        ]
+    }));
+    if (get(selectedOrganization) === tempOrganization.name) {
+        switchingOrganization.set(false);
+    } else {
+        selectedOrganization.set(tempOrganization.name);
+    }
+
+    selectedGroup.set(addedGroups?.length ? addedGroups[0] : null);
+    return true;
 }
 
 function isHashChangeEvent(
